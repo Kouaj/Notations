@@ -1,0 +1,37 @@
+
+import { Parcelle, HistoryRecord } from "@/shared/schema";
+
+const STORAGE_KEYS = {
+  PARCELLES: "parcelles",
+  SELECTED_PARCELLE: "selectedParcelle",
+  HISTORY: "history"
+};
+
+export const storage = {
+  async getParcelles(): Promise<Parcelle[]> {
+    const stored = localStorage.getItem(STORAGE_KEYS.PARCELLES);
+    if (!stored) return [];
+    return JSON.parse(stored);
+  },
+
+  async getSelectedParcelle(): Promise<Parcelle | null> {
+    const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_PARCELLE);
+    if (!stored) return null;
+    return JSON.parse(stored);
+  },
+
+  async setSelectedParcelle(parcelle: Parcelle | null): Promise<void> {
+    if (parcelle === null) {
+      localStorage.removeItem(STORAGE_KEYS.SELECTED_PARCELLE);
+    } else {
+      localStorage.setItem(STORAGE_KEYS.SELECTED_PARCELLE, JSON.stringify(parcelle));
+    }
+  },
+
+  async saveHistory(record: HistoryRecord): Promise<void> {
+    const stored = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    const history = stored ? JSON.parse(stored) : [];
+    history.push(record);
+    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+  }
+};

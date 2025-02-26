@@ -1,137 +1,282 @@
 
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MapPin, ChartBar } from "lucide-react";
-import { useState } from "react";
-
-interface Parcelle {
-  id: string;
-  nom: string;
-  maladie: string;
-  notation: number;
-  date: string;
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { Parcelle, Note, HistoryRecord } from "@/shared/schema";
+import { storage } from "@/lib/storage";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function Index() {
-  const [parcelles, setParcelles] = useState<Parcelle[]>([
-    {
-      id: "1",
-      nom: "Parcelle A",
-      maladie: "Mildiou",
-      notation: 3,
-      date: "2024-03-19"
-    },
-    {
-      id: "2",
-      nom: "Parcelle B",
-      maladie: "Oïdium",
-      notation: 2,
-      date: "2024-03-19"
-    }
-  ]);
-
-  const [newParcelle, setNewParcelle] = useState({
-    nom: "",
-    maladie: "",
-    notation: "0"
+  const [_, setLocation] = useLocation();
+  const [parcelles, setParcelles] = useState<Parcelle[]>([]);
+  const [selectedParcelle, setSelectedParcelle] = useState<Parcelle | null>(null);
+  const [selectedPlacette, setSelectedPlacette] = useState<number | null>(null);
+  const [partie, setPartie] = useState<"feuilles" | "grappe">("feuilles");
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [currentNote, setCurrentNote] = useState({
+    mildiou: "",
+    oidium: "",
+    BR: "",
+    botrytis: ""
   });
+  const [showContinueDialog, setShowContinueDialog] = useState(false);
+  const { toast } = useToast();
 
-  const ajouterParcelle = () => {
-    const parcelle: Parcelle = {
-      id: (parcelles.length + 1).toString(),
-      nom: newParcelle.nom,
-      maladie: newParcelle.maladie,
-      notation: parseInt(newParcelle.notation),
-      date: new Date().toISOString().split('T')[0]
+  useEffect(() => {
+    Promise.all([
+      storage.getParcelles(),
+      storage.getSelectedParcelle()
+    ]).then(([parcelles, selectedParcelle]) => {
+      setParcelles(parcelles);
+      if (selectedParcelle) {
+        setSelectedParcelle(selectedParcelle);
+      }
+    });
+  }, []);
+
+  const handleSubmit = () => {
+    if (!selectedParcelle || selectedPlacette === null) {
+      toast({
+        title: "Erreur",
+        description: "Merci de choisir une parcelle et une placette",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const note: Note = {
+      mildiou: Number(currentNote.mildiou) || 0,
+      oidium: Number(currentNote.oidium) || 0,
+      BR: Number(currentNote.BR) || 0,
+      botrytis: Number(currentNote.botrytis) || 0,
+      partie,
+      date: new Date().toISOString()
     };
-    setParcelles([...parcelles, parcelle]);
-    setNewParcelle({ nom: "", maladie: "", notation: "0" });
+
+    setNotes([...notes, note]);
+    setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
   };
+
+  const calculateResults = () => {
+    if (notes.length === 0) return null;
+
+    const totals = { mildiou: 0, oidium: 0, BR: 0, botrytis: 0 };
+    const positives = { mildiou: 0, oidium: 0, BR: 0, botrytis: 0 };
+
+    notes.forEach(note => {
+      ['mildiou', 'oidium', 'BR', 'botrytis'].forEach(disease => {
+        const value = Number(note[disease as keyof typeof note]);
+        totals[disease as keyof typeof totals] += value;
+        if (value > 0) {
+          positives[disease as keyof typeof positives]++;
+        }
+      });
+    });
+
+    const frequency = Object.keys(totals).reduce((acc, disease) => ({
+      ...acc,
+      [disease]: (positives[disease as keyof typeof positives] / notes.length) * 100
+    }), {} as Record<string, number>);
+
+    const intensity = Object.keys(totals).reduce((acc, disease) => ({
+      ...acc,
+      [disease]: totals[disease as keyof typeof totals] / notes.length
+    }), {} as Record<string, number>);
+
+    return { frequency, intensity };
+  };
+
+  const handleFinish = async () => {
+    if (!selectedParcelle || selectedPlacette === null || notes.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Merci d'ajouter au moins une note",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const results = calculateResults();
+    if (!results) return;
+
+    const historyRecord: HistoryRecord = {
+      id: Date.now(),
+      parcelleName: selectedParcelle.name,
+      placetteId: selectedPlacette,
+      notes,
+      count: notes.length,
+      frequency: results.frequency,
+      intensity: results.intensity,
+      date: new Date().toISOString()
+    };
+
+    await storage.saveHistory(historyRecord);
+    setShowContinueDialog(true);
+  };
+
+  const handleContinue = (shouldContinue: boolean) => {
+    setShowContinueDialog(false);
+    if (shouldContinue) {
+      setNotes([]);
+    } else {
+      storage.setSelectedParcelle(null);
+      setLocation("/parcelles");
+    }
+  };
+
+  const results = calculateResults();
 
   return (
     <div className="container mx-auto p-4 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-6 w-6" />
-            Notation des Maladies par Parcelle
-          </CardTitle>
+          <CardTitle>Notation des maladies</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-4 gap-4 mb-6">
-            <Input
-              placeholder="Nom de la parcelle"
-              value={newParcelle.nom}
-              onChange={(e) => setNewParcelle({...newParcelle, nom: e.target.value})}
-            />
-            <Select
-              value={newParcelle.maladie}
-              onValueChange={(value) => setNewParcelle({...newParcelle, maladie: value})}
-            >
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select value={selectedParcelle?.id.toString()} onValueChange={(value) => {
+              const parcelle = parcelles.find(p => p.id === Number(value));
+              setSelectedParcelle(parcelle || null);
+              setSelectedPlacette(null);
+            }}>
               <SelectTrigger>
-                <SelectValue placeholder="Type de maladie" />
+                <SelectValue placeholder="Choisir une parcelle" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Mildiou">Mildiou</SelectItem>
-                <SelectItem value="Oïdium">Oïdium</SelectItem>
-                <SelectItem value="Rouille">Rouille</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={newParcelle.notation}
-              onValueChange={(value) => setNewParcelle({...newParcelle, notation: value})}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Notation" />
-              </SelectTrigger>
-              <SelectContent>
-                {[0,1,2,3,4,5].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num.toString()}
+                {parcelles.map(parcelle => (
+                  <SelectItem key={parcelle.id} value={parcelle.id.toString()}>
+                    {parcelle.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={ajouterParcelle} className="w-full">
-              Ajouter une notation
-            </Button>
+
+            {selectedParcelle && (
+              <Select value={selectedPlacette?.toString()} onValueChange={(value) => setSelectedPlacette(Number(value))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une placette" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedParcelle.placettes.map(placette => (
+                    <SelectItem key={placette.id} value={placette.id.toString()}>
+                      {placette.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ChartBar className="h-5 w-5" />
-                Liste des Notations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Select value={partie} onValueChange={(value: "feuilles" | "grappe") => setPartie(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choisir une partie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="feuilles">Feuilles</SelectItem>
+              <SelectItem value="grappe">Grappe</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label>Mildiou</label>
+              <Input
+                type="number"
+                value={currentNote.mildiou}
+                onChange={e => setCurrentNote({ ...currentNote, mildiou: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label>Oidium</label>
+              <Input
+                type="number"
+                value={currentNote.oidium}
+                onChange={e => setCurrentNote({ ...currentNote, oidium: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label>BR</label>
+              <Input
+                type="number"
+                value={currentNote.BR}
+                onChange={e => setCurrentNote({ ...currentNote, BR: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label>Botrytis</label>
+              <Input
+                type="number"
+                value={currentNote.botrytis}
+                onChange={e => setCurrentNote({ ...currentNote, botrytis: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <Button onClick={handleSubmit} className="flex-1">
+              Ajouter
+            </Button>
+            <Button onClick={handleFinish} className="flex-1" variant="secondary">
+              Terminer
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {results && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Résultats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[300px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Parcelle</TableHead>
                     <TableHead>Maladie</TableHead>
-                    <TableHead>Notation</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Fréquence (%)</TableHead>
+                    <TableHead>Intensité</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {parcelles.map((parcelle) => (
-                    <TableRow key={parcelle.id}>
-                      <TableCell>{parcelle.nom}</TableCell>
-                      <TableCell>{parcelle.maladie}</TableCell>
-                      <TableCell>{parcelle.notation}</TableCell>
-                      <TableCell>{parcelle.date}</TableCell>
+                  {Object.entries(results.frequency).map(([disease, freq]) => (
+                    <TableRow key={disease}>
+                      <TableCell>{disease}</TableCell>
+                      <TableCell>{freq.toFixed(2)}%</TableCell>
+                      <TableCell>{results.intensity[disease].toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      <AlertDialog open={showContinueDialog} onOpenChange={setShowContinueDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Poursuivre la notation ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Souhaitez-vous faire une nouvelle notation sur cette parcelle ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleContinue(false)}>
+              Non, revenir à la liste des parcelles
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleContinue(true)}>
+              Oui, poursuivre
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
