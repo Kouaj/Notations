@@ -1,4 +1,3 @@
-
 import { Parcelle, HistoryRecord } from "@/shared/schema";
 
 const STORAGE_KEYS = {
@@ -45,5 +44,19 @@ export const storage = {
     const history = stored ? JSON.parse(stored) : [];
     history.push(record);
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+  },
+
+  async getHistory(): Promise<HistoryRecord[]> {
+    const stored = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    if (!stored) return [];
+    return JSON.parse(stored);
+  },
+
+  async deleteHistory(id: number): Promise<void> {
+    const stored = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    if (!stored) return;
+    const history = JSON.parse(stored);
+    const filteredHistory = history.filter((h: HistoryRecord) => h.id !== id);
+    localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(filteredHistory));
   }
 };
