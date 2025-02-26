@@ -28,6 +28,18 @@ export const storage = {
     }
   },
 
+  async saveParcelle(parcelle: Parcelle): Promise<void> {
+    const parcelles = await this.getParcelles();
+    parcelles.push(parcelle);
+    localStorage.setItem(STORAGE_KEYS.PARCELLES, JSON.stringify(parcelles));
+  },
+
+  async deleteParcelle(id: number): Promise<void> {
+    const parcelles = await this.getParcelles();
+    const filteredParcelles = parcelles.filter(p => p.id !== id);
+    localStorage.setItem(STORAGE_KEYS.PARCELLES, JSON.stringify(filteredParcelles));
+  },
+
   async saveHistory(record: HistoryRecord): Promise<void> {
     const stored = localStorage.getItem(STORAGE_KEYS.HISTORY);
     const history = stored ? JSON.parse(stored) : [];

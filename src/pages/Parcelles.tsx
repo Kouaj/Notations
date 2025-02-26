@@ -1,0 +1,187 @@
+
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Parcelle, parcelleSchema } from "@/shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Trash2 } from "lucide-react";
+import { storage } from "@/lib/storage";
+
+export default function Parcelles() {
+  const [_, setLocation] = useLocation();
+  const [parcelles, setParcelles] = useState<Parcelle[]>([]);
+  const [newParcelle, setNewParcelle] = useState({
+    name: "",
+    reseau: "",
+    placettes: [{ name: "" }]
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    storage.getParcelles().then(setParcelles);
+  }, []);
+
+  const handleSelectParcelle = async (parcelle: Parcelle) => {
+    await storage.setSelectedParcelle(parcelle);
+    setLocation("/");
+  };
+
+  const handleAddPlacette = () => {
+    setNewParcelle({
+      ...newParcelle,
+      placettes: [...newParcelle.placettes, { name: "" }]
+    });
+  };
+
+  const handlePlacetteChange = (index: number, value: string) => {
+    const updatedPlacettes = [...newParcelle.placettes];
+    updatedPlacettes[index] = { name: value };
+    setNewParcelle({ ...newParcelle, placettes: updatedPlacettes });
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const newParcelleData: Parcelle = {
+        id: Date.now(),
+        name: newParcelle.name,
+        reseau: newParcelle.reseau,
+        placettes: newParcelle.placettes.map((p, index) => ({
+          id: index + 1,
+          name: p.name,
+          notes: []
+        }))
+      };
+
+      parcelleSchema.parse(newParcelleData);
+      await storage.saveParcelle(newParcelleData);
+      setParcelles([...parcelles, newParcelleData]);
+
+      setNewParcelle({
+        name: "",
+        reseau: "",
+        placettes: [{ name: "" }]
+      });
+
+      toast({
+        title: "Réussi",
+        description: "Parcelle ajoutée"
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Merci de remplir tous les champs requis",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    await storage.deleteParcelle(id);
+    const updatedParcelles = parcelles.filter(p => p.id !== id);
+    setParcelles(updatedParcelles);
+    toast({
+      title: "Réussi",
+      description: "Parcelle supprimée"
+    });
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <Tabs defaultValue="list" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="list">Liste des parcelles</TabsTrigger>
+          <TabsTrigger value="add">Ajouter une parcelle</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {parcelles.map(parcelle => (
+              <Card key={parcelle.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleSelectParcelle(parcelle)}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {parcelle.name}
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(parcelle.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    Réseau: {parcelle.reseau}
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {parcelle.placettes.map(placette => (
+                      <div key={placette.id} className="text-sm">
+                        Placette {placette.name}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="add">
+          <Card>
+            <CardHeader>
+              <CardTitle>Nouvelle parcelle</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label>Nom de la parcelle</label>
+                <Input
+                  value={newParcelle.name}
+                  onChange={e => setNewParcelle({ ...newParcelle, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label>Réseau</label>
+                <Input
+                  value={newParcelle.reseau}
+                  onChange={e => setNewParcelle({ ...newParcelle, reseau: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <label>Placettes</label>
+                {newParcelle.placettes.map((placette, index) => (
+                  <Input
+                    key={index}
+                    value={placette.name}
+                    onChange={e => handlePlacetteChange(index, e.target.value)}
+                    placeholder={`Placette ${index + 1}`}
+                  />
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddPlacette}
+                  className="w-full"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ajouter une placette
+                </Button>
+              </div>
+
+              <Button onClick={handleSubmit} className="w-full">
+                Créer la parcelle
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
