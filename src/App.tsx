@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Parcelles from "@/pages/parcelles";
+import Reseaux from "@/pages/reseaux";
 import History from "@/pages/history";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
@@ -20,6 +21,7 @@ function Navigation() {
       <div className="container mx-auto px-4">
         <Tabs value={location} onValueChange={setLocation} className="w-full">
           <TabsList className="w-full justify-start">
+            <TabsTrigger value="/reseaux">Réseaux</TabsTrigger>
             <TabsTrigger value="/parcelles">Parcelles</TabsTrigger>
             <TabsTrigger value="/">Notation</TabsTrigger>
             <TabsTrigger value="/history">Historique</TabsTrigger>
@@ -38,6 +40,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/parcelles" component={Parcelles} />
+          <Route path="/reseaux" component={Reseaux} />
           <Route path="/history" component={History} />
           <Route component={NotFound} />
         </Switch>

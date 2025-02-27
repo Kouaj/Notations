@@ -5,29 +5,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Parcelle, parcelleSchema } from "@/shared/schema";
+import { Parcelle, parcelleSchema, Reseau } from "@/shared/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { storage } from "@/lib/storage";
+import { Badge } from "@/components/ui/badge";
 
 export default function Parcelles() {
   const [_, setLocation] = useLocation();
   const [parcelles, setParcelles] = useState<Parcelle[]>([]);
+  const [reseaux, setReseaux] = useState<Reseau[]>([]);
   const [newParcelle, setNewParcelle] = useState({
     name: "",
-    reseau: "",
+    reseauId: "",
     placettes: [{ name: "" }]
   });
   const { toast } = useToast();
 
   useEffect(() => {
-    storage.getParcelles().then(setParcelles);
+    Promise.all([
+      storage.getParcelles(),
+      storage.getReseaux()
+    ]).then(([parcelles, reseaux]) => {
+      setParcelles(parcelles);
+      setReseaux(reseaux);
+    });
   }, []);
-
-  const handleSelectParcelle = async (parcelle: Parcelle) => {
-    await storage.setSelectedParcelle(parcelle);
-    setLocation("/");
-  };
 
   const handleAddPlacette = () => {
     setNewParcelle({
@@ -44,16 +48,35 @@ export default function Parcelles() {
 
   const handleSubmit = async () => {
     try {
+      const selectedReseau = reseaux.find(r => r.id === Number(newParcelle.reseauId));
+      
+      if (!selectedReseau) {
+        toast({
+          title: "Erreur",
+          description: "Merci de sélectionner un réseau",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const newParcelleData: Parcelle = {
         id: Date.now(),
         name: newParcelle.name,
-        reseau: newParcelle.reseau,
+        reseauId: Number(newParcelle.reseauId),
+        reseauName: selectedReseau.name,
         placettes: newParcelle.placettes.map((p, index) => ({
           id: index + 1,
           name: p.name,
+          parcelleId: 0, // Sera mis à jour après la création de la parcelle
           notes: []
         }))
       };
+
+      // Mettre à jour les IDs des placettes
+      newParcelleData.placettes = newParcelleData.placettes.map(p => ({
+        ...p,
+        parcelleId: newParcelleData.id
+      }));
 
       parcelleSchema.parse(newParcelleData);
       await storage.saveParcelle(newParcelleData);
@@ -61,7 +84,7 @@ export default function Parcelles() {
 
       setNewParcelle({
         name: "",
-        reseau: "",
+        reseauId: "",
         placettes: [{ name: "" }]
       });
 
@@ -70,6 +93,7 @@ export default function Parcelles() {
         description: "Parcelle ajoutée"
       });
     } catch (error) {
+      console.error(error);
       toast({
         title: "Erreur",
         description: "Merci de remplir tous les champs requis",
@@ -99,7 +123,7 @@ export default function Parcelles() {
         <TabsContent value="list">
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {parcelles.map(parcelle => (
-              <Card key={parcelle.id} className="cursor-pointer hover:bg-gray-50" onClick={() => handleSelectParcelle(parcelle)}>
+              <Card key={parcelle.id} className="hover:bg-gray-50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     {parcelle.name}
@@ -107,25 +131,18 @@ export default function Parcelles() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(parcelle.id);
-                    }}
+                    onClick={() => handleDelete(parcelle.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-sm text-muted-foreground">
-                    Réseau: {parcelle.reseau}
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Réseau: {parcelle.reseauName}
                   </div>
-                  <div className="mt-2 space-y-1">
-                    {parcelle.placettes.map(placette => (
-                      <div key={placette.id} className="text-sm">
-                        Placette {placette.name}
-                      </div>
-                    ))}
-                  </div>
+                  <Badge variant="secondary">
+                    {parcelle.placettes.length} placette{parcelle.placettes.length > 1 ? 's' : ''}
+                  </Badge>
                 </CardContent>
               </Card>
             ))}
@@ -148,10 +165,21 @@ export default function Parcelles() {
 
               <div className="space-y-2">
                 <label>Réseau</label>
-                <Input
-                  value={newParcelle.reseau}
-                  onChange={e => setNewParcelle({ ...newParcelle, reseau: e.target.value })}
-                />
+                <Select 
+                  value={newParcelle.reseauId} 
+                  onValueChange={(value) => setNewParcelle({ ...newParcelle, reseauId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un réseau" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reseaux.map(reseau => (
+                      <SelectItem key={reseau.id} value={reseau.id.toString()}>
+                        {reseau.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-4">

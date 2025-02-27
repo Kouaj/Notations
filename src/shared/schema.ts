@@ -4,16 +4,23 @@ import { z } from "zod";
 export type NotationType = "maladie" | "pheno" | "ravageur";
 export type PartiePlante = "feuilles" | "grappe";
 
+export interface Reseau {
+  id: number;
+  name: string;
+}
+
 export interface Parcelle {
   id: number;
   name: string;
-  reseau: string;
+  reseauId: number;
+  reseauName: string;
   placettes: Placette[];
 }
 
 export interface Placette {
   id: number;
   name: string;
+  parcelleId: number;
   notes: Note[];
 }
 
@@ -31,6 +38,8 @@ export interface HistoryRecord {
   id: number;
   parcelleName: string;
   parcelleId: number;
+  reseauName: string;
+  reseauId: number;
   placetteId: number;
   notes: Note[];
   count: number;
@@ -49,13 +58,20 @@ export interface HistoryGroup {
   records: HistoryRecord[];
 }
 
+export const reseauSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1)
+});
+
 export const parcelleSchema = z.object({
   id: z.number(),
   name: z.string().min(1),
-  reseau: z.string(),
+  reseauId: z.number(),
+  reseauName: z.string(),
   placettes: z.array(z.object({
     id: z.number(),
     name: z.string().min(1),
+    parcelleId: z.number(),
     notes: z.array(z.object({
       mildiou: z.number(),
       oidium: z.number(),

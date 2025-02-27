@@ -9,18 +9,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Parcelle, Note, HistoryRecord, NotationType, PartiePlante } from "@/shared/schema";
+import { Parcelle, Note, HistoryRecord, NotationType, PartiePlante, Reseau } from "@/shared/schema";
 import { storage } from "@/lib/storage";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 export default function Home() {
   const [_, setLocation] = useLocation();
+  const [reseaux, setReseaux] = useState<Reseau[]>([]);
   const [parcelles, setParcelles] = useState<Parcelle[]>([]);
+  const [selectedReseau, setSelectedReseau] = useState<Reseau | null>(null);
   const [selectedParcelle, setSelectedParcelle] = useState<Parcelle | null>(null);
   const [selectedPlacette, setSelectedPlacette] = useState<number | null>(null);
   const [notationType, setNotationType] = useState<NotationType>("maladie");
   const [partie, setPartie] = useState<PartiePlante>("feuilles");
   const [notes, setNotes] = useState<Note[]>([]);
+  const [showNotes, setShowNotes] = useState(false);
   const [currentNote, setCurrentNote] = useState({
     mildiou: "",
     oidium: "",
@@ -33,15 +37,40 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
+      storage.getReseaux(),
       storage.getParcelles(),
+      storage.getSelectedReseau(),
       storage.getSelectedParcelle()
-    ]).then(([parcelles, selectedParcelle]) => {
+    ]).then(([reseaux, parcelles, selectedReseau, selectedParcelle]) => {
+      setReseaux(reseaux);
       setParcelles(parcelles);
-      if (selectedParcelle) {
-        setSelectedParcelle(selectedParcelle);
+      
+      if (selectedReseau) {
+        setSelectedReseau(selectedReseau);
+        
+        // Filtrer les parcelles en fonction du réseau sélectionné
+        const filteredParcelles = parcelles.filter(p => p.reseauId === selectedReseau.id);
+        
+        if (selectedParcelle && selectedParcelle.reseauId === selectedReseau.id) {
+          setSelectedParcelle(selectedParcelle);
+        } else if (filteredParcelles.length > 0) {
+          setSelectedParcelle(null);
+        }
       }
     });
   }, []);
+
+  // Mettre à jour les parcelles quand le réseau sélectionné change
+  useEffect(() => {
+    if (selectedReseau) {
+      const filteredParcelles = parcelles.filter(p => p.reseauId === selectedReseau.id);
+      // Réinitialiser la parcelle sélectionnée si elle n'appartient pas au réseau sélectionné
+      if (selectedParcelle && selectedParcelle.reseauId !== selectedReseau.id) {
+        setSelectedParcelle(null);
+        setSelectedPlacette(null);
+      }
+    }
+  }, [selectedReseau, parcelles]);
 
   const handleSubmit = () => {
     if (!selectedParcelle || selectedPlacette === null) {
@@ -74,6 +103,17 @@ export default function Home() {
     }, 10);
   };
 
+  const handleRemoveNote = (index: number) => {
+    const updatedNotes = [...notes];
+    updatedNotes.splice(index, 1);
+    setNotes(updatedNotes);
+    
+    toast({
+      title: "Note supprimée",
+      description: "La note a été supprimée avec succès",
+    });
+  };
+
   const calculateResults = () => {
     if (notes.length === 0) return null;
 
@@ -104,10 +144,10 @@ export default function Home() {
   };
 
   const handleFinish = async () => {
-    if (!selectedParcelle || selectedPlacette === null || notes.length === 0) {
+    if (!selectedReseau || !selectedParcelle || selectedPlacette === null || notes.length === 0) {
       toast({
         title: "Erreur",
-        description: "Merci d'ajouter au moins une note",
+        description: "Merci de compléter tous les champs et d'ajouter au moins une note",
         variant: "destructive"
       });
       return;
@@ -118,6 +158,8 @@ export default function Home() {
 
     const historyRecord: HistoryRecord = {
       id: Date.now(),
+      reseauName: selectedReseau.name,
+      reseauId: selectedReseau.id,
       parcelleName: selectedParcelle.name,
       parcelleId: selectedParcelle.id,
       placetteId: selectedPlacette,
@@ -138,7 +180,9 @@ export default function Home() {
     setShowContinueDialog(false);
     if (shouldContinue) {
       setNotes([]);
+      setShowNotes(false);
     } else {
+      storage.setSelectedReseau(null);
       storage.setSelectedParcelle(null);
       setLocation("/parcelles");
     }
@@ -153,25 +197,59 @@ export default function Home() {
           <CardTitle>Notation des maladies</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select value={selectedParcelle?.id.toString()} onValueChange={(value) => {
-              const parcelle = parcelles.find(p => p.id === Number(value));
-              setSelectedParcelle(parcelle || null);
+          {/* Étape 1: Sélection du réseau */}
+          <div className="space-y-2">
+            <label>Réseau</label>
+            <Select value={selectedReseau?.id.toString()} onValueChange={(value) => {
+              const reseau = reseaux.find(r => r.id === Number(value));
+              setSelectedReseau(reseau || null);
+              storage.setSelectedReseau(reseau || null);
+              setSelectedParcelle(null);
               setSelectedPlacette(null);
             }}>
               <SelectTrigger>
-                <SelectValue placeholder="Choisir une parcelle" />
+                <SelectValue placeholder="Choisir un réseau" />
               </SelectTrigger>
               <SelectContent>
-                {parcelles.map(parcelle => (
-                  <SelectItem key={parcelle.id} value={parcelle.id.toString()}>
-                    {parcelle.name}
+                {reseaux.map(reseau => (
+                  <SelectItem key={reseau.id} value={reseau.id.toString()}>
+                    {reseau.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
 
-            {selectedParcelle && (
+          {/* Étape 2: Sélection de la parcelle */}
+          {selectedReseau && (
+            <div className="space-y-2">
+              <label>Parcelle</label>
+              <Select value={selectedParcelle?.id.toString()} onValueChange={(value) => {
+                const parcelle = parcelles.find(p => p.id === Number(value));
+                setSelectedParcelle(parcelle || null);
+                storage.setSelectedParcelle(parcelle || null);
+                setSelectedPlacette(null);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une parcelle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {parcelles
+                    .filter(p => p.reseauId === selectedReseau.id)
+                    .map(parcelle => (
+                      <SelectItem key={parcelle.id} value={parcelle.id.toString()}>
+                        {parcelle.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Étape 3: Sélection de la placette */}
+          {selectedParcelle && (
+            <div className="space-y-2">
+              <label>Placette</label>
               <Select value={selectedPlacette?.toString()} onValueChange={(value) => setSelectedPlacette(Number(value))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une placette" />
@@ -184,22 +262,30 @@ export default function Home() {
                   ))}
                 </SelectContent>
               </Select>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select value={notationType} onValueChange={(value: NotationType) => setNotationType(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Type de notation" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="maladie">Maladie</SelectItem>
-                <SelectItem value="pheno">Phéno</SelectItem>
-                <SelectItem value="ravageur">Ravageur</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Étape 4: Type de notation */}
+          {selectedPlacette !== null && (
+            <div className="space-y-2">
+              <label>Type de notation</label>
+              <Select value={notationType} onValueChange={(value: NotationType) => setNotationType(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type de notation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="maladie">Maladie</SelectItem>
+                  <SelectItem value="pheno">Phéno</SelectItem>
+                  <SelectItem value="ravageur">Ravageur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-            {notationType === "maladie" && (
+          {/* Étape 5: Partie de la plante (seulement pour les maladies) */}
+          {notationType === "maladie" && (
+            <div className="space-y-2">
+              <label>Partie de la plante</label>
               <Select value={partie} onValueChange={(value: PartiePlante) => setPartie(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Partie de la plante" />
@@ -209,10 +295,11 @@ export default function Home() {
                   <SelectItem value="grappe">Grappe</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-          </div>
+            </div>
+          )}
 
-          {notationType === "maladie" && (
+          {/* Formulaire de notation pour les maladies */}
+          {notationType === "maladie" && partie && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label>Mildiou</label>
@@ -250,24 +337,28 @@ export default function Home() {
             </div>
           )}
 
-          {/* TODO: Ajouter les champs spécifiques pour phéno et ravageur */}
+          {/* Autres types de notation à implémenter */}
           {(notationType === "pheno" || notationType === "ravageur") && (
             <div className="p-4 bg-muted rounded-md text-center">
               Les champs pour {notationType === "pheno" ? "phénologie" : "ravageurs"} seront ajoutés dans une future version.
             </div>
           )}
 
-          <div className="flex gap-4">
-            <Button onClick={handleSubmit} className="flex-1">
-              Ajouter
-            </Button>
-            <Button onClick={handleFinish} className="flex-1" variant="secondary">
-              Terminer
-            </Button>
-          </div>
+          {/* Boutons d'action */}
+          {notationType && (notationType !== "maladie" || partie) && (
+            <div className="flex gap-4">
+              <Button onClick={handleSubmit} className="flex-1">
+                Ajouter
+              </Button>
+              <Button onClick={handleFinish} className="flex-1" variant="secondary">
+                Terminer
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Badge affichant le nombre de notes en cours */}
       {notes.length > 0 && (
         <div className="flex items-center justify-center py-2">
           <Badge variant="outline" className="text-sm">
@@ -276,6 +367,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* Affichage des résultats */}
       {results && (
         <Card>
           <CardHeader>
@@ -284,8 +376,8 @@ export default function Home() {
               <Badge>{notes.length} note{notes.length > 1 ? 's' : ''}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[300px]">
+          <CardContent className="space-y-4">
+            <ScrollArea className="h-[200px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -305,10 +397,58 @@ export default function Home() {
                 </TableBody>
               </Table>
             </ScrollArea>
+            
+            {/* Bouton pour afficher/masquer les notes */}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowNotes(!showNotes)}
+              className="w-full"
+            >
+              {showNotes ? "Masquer les notes" : "Afficher les notes"}
+            </Button>
+            
+            {/* Liste des notes avec possibilité de suppression */}
+            {showNotes && notes.length > 0 && (
+              <ScrollArea className="h-[200px] border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>N°</TableHead>
+                      <TableHead>Mildiou</TableHead>
+                      <TableHead>Oidium</TableHead>
+                      <TableHead>BR</TableHead>
+                      <TableHead>Botrytis</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...notes].reverse().map((note, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{notes.length - index}</TableCell>
+                        <TableCell>{note.mildiou}</TableCell>
+                        <TableCell>{note.oidium}</TableCell>
+                        <TableCell>{note.BR}</TableCell>
+                        <TableCell>{note.botrytis}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleRemoveNote(notes.length - 1 - index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
       )}
 
+      {/* Dialogue de confirmation pour continuer ou revenir aux parcelles */}
       <AlertDialog open={showContinueDialog} onOpenChange={setShowContinueDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
