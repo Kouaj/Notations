@@ -1,6 +1,9 @@
 
 import { z } from "zod";
 
+export type NotationType = "maladie" | "pheno" | "ravageur";
+export type PartiePlante = "feuilles" | "grappe";
+
 export interface Parcelle {
   id: number;
   name: string;
@@ -19,19 +22,31 @@ export interface Note {
   oidium: number;
   BR: number;
   botrytis: number;
-  partie: "feuilles" | "grappe";
+  partie: PartiePlante;
+  type?: NotationType;
   date: string;
 }
 
 export interface HistoryRecord {
   id: number;
   parcelleName: string;
+  parcelleId: number;
   placetteId: number;
   notes: Note[];
   count: number;
   frequency: Record<string, number>;
   intensity: Record<string, number>;
+  type: NotationType;
+  partie: PartiePlante;
   date: string;
+}
+
+export interface HistoryGroup {
+  parcelleName: string;
+  parcelleId: number;
+  date: string;
+  formattedDate: string;
+  records: HistoryRecord[];
 }
 
 export const parcelleSchema = z.object({
@@ -47,6 +62,7 @@ export const parcelleSchema = z.object({
       BR: z.number(),
       botrytis: z.number(),
       partie: z.enum(["feuilles", "grappe"]),
+      type: z.enum(["maladie", "pheno", "ravageur"]).optional(),
       date: z.string()
     }))
   }))
