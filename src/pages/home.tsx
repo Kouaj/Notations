@@ -12,7 +12,7 @@ import { Parcelle, Note, HistoryRecord } from "@/shared/schema";
 import { storage } from "@/lib/storage";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-export default function Index() {
+export default function Home() {
   const [_, setLocation] = useLocation();
   const [parcelles, setParcelles] = useState<Parcelle[]>([]);
   const [selectedParcelle, setSelectedParcelle] = useState<Parcelle | null>(null);
