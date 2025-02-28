@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -20,10 +20,12 @@ const useHashLocation = () => {
 
   React.useEffect(() => {
     const handler = () => {
-      setLoc(window.location.hash.slice(1) || "/");
+      const hash = window.location.hash.slice(1);
+      setLoc(hash || "/");
     };
 
     window.addEventListener("hashchange", handler);
+    handler(); // Initialize with current hash
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
@@ -31,7 +33,7 @@ const useHashLocation = () => {
     window.location.hash = to;
   };
 
-  return [loc, navigate];
+  return [loc, navigate] as [string, (to: string) => void];
 };
 
 function Navigation() {
@@ -53,7 +55,7 @@ function Navigation() {
   );
 }
 
-function Router() {
+function RouterContent() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -71,13 +73,12 @@ function Router() {
 }
 
 function App() {
-  // Utiliser le routeur avec location hash pour GitHub Pages
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter hook={useHashLocation}>
-          <Router />
-        </WouterRouter>
+        <Router hook={useHashLocation}>
+          <RouterContent />
+        </Router>
         <Toaster />
         <Sonner />
       </TooltipProvider>
