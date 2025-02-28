@@ -1,404 +1,271 @@
-
-import { useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { XCircle } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Reseau, Parcelle, Note, NotationType, PartiePlante } from "@/shared/schema";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { storage } from "@/lib/storage";
+import { useRouter } from "wouter";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { CancelDialog } from "./CancelDialog";
+import { HistoryRecord } from "@/shared/schema";
+
+const formSchema = z.object({
+  parcelId: z.string().min(2, {
+    message: "L'identifiant de la parcelle doit comporter au moins 2 caractères.",
+  }),
+  date: z.string().min(1, {
+    message: "La date est obligatoire.",
+  }),
+  soilType: z.string().min(1, {
+    message: "Le type de sol est obligatoire.",
+  }),
+  cropType: z.string().min(1, {
+    message: "Le type de culture est obligatoire.",
+  }),
+  yieldEstimate: z.string().optional(),
+  notes: z.string().optional(),
+});
 
 interface NotationFormProps {
-  reseaux: Reseau[];
-  parcelles: Parcelle[];
-  selectedReseau: Reseau | null;
-  selectedParcelle: Parcelle | null;
-  selectedPlacette: number | null;
-  notationType: NotationType | null;
-  partie: PartiePlante | null;
-  notes: Note[];
-  hauteurIR: string;
-  hauteurCavaillon: string;
-  nbVDT: string;
-  fait: boolean;
-  commentaire: string;
-  isEcumesReseau: boolean;
-  setSelectedReseau: (reseau: Reseau | null) => void;
-  setSelectedParcelle: (parcelle: Parcelle | null) => void;
-  setSelectedPlacette: (placetteId: number | null) => void;
-  setNotationType: (type: NotationType | null) => void;
-  setPartie: (partie: PartiePlante | null) => void;
-  setHauteurIR: (hauteur: string) => void;
-  setHauteurCavaillon: (hauteur: string) => void;
-  setNbVDT: (nb: string) => void;
-  setFait: (fait: boolean) => void;
-  setCommentaire: (commentaire: string) => void;
-  onSubmit: (note: Note) => void;
-  onFinish: () => void;
   onCancel: () => void;
+  parcelId?: string;
+  onNotationSaved: (newNotation: HistoryRecord) => void;
 }
 
-export function NotationForm({
-  reseaux,
-  parcelles,
-  selectedReseau,
-  selectedParcelle,
-  selectedPlacette,
-  notationType,
-  partie,
-  notes,
-  hauteurIR,
-  hauteurCavaillon,
-  nbVDT,
-  fait,
-  commentaire,
-  isEcumesReseau,
-  setSelectedReseau,
-  setSelectedParcelle,
-  setSelectedPlacette,
-  setNotationType,
-  setPartie,
-  setHauteurIR,
-  setHauteurCavaillon,
-  setNbVDT,
-  setFait,
-  setCommentaire,
-  onSubmit,
-  onFinish,
-  onCancel
-}: NotationFormProps) {
+type FormState = z.infer<typeof formSchema>;
+
+export function NotationForm({ onCancel, parcelId, onNotationSaved }: NotationFormProps) {
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const { toast } = useToast();
-  const mildouInputRef = useRef<HTMLInputElement>(null);
-  
-  const [currentNote, setCurrentNote] = React.useState({
-    mildiou: "",
-    oidium: "",
-    BR: "",
-    botrytis: ""
+  const [, navigate] = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const form = useForm<FormState>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      parcelId: parcelId || '',
+      date: new Date().toISOString().split('T')[0],
+      soilType: '',
+      cropType: '',
+      yieldEstimate: '',
+      notes: '',
+    },
+    mode: "onChange",
   });
 
-  const handleSubmit = () => {
-    if (!selectedParcelle) {
-      toast({
-        title: "Erreur",
-        description: "Merci de choisir une parcelle",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (notationType === "maladie" && selectedPlacette === null) {
-      toast({
-        title: "Erreur",
-        description: "Merci de choisir une placette",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    let note: Note = {
-      mildiou: Number(currentNote.mildiou) || 0,
-      oidium: Number(currentNote.oidium) || 0,
-      BR: Number(currentNote.BR) || 0,
-      botrytis: Number(currentNote.botrytis) || 0,
-      partie: partie || "feuilles",
-      type: notationType || "maladie",
-      date: new Date().toISOString()
-    };
-
-    if (notationType === "recouvrement") {
-      note.hauteurIR = Number(hauteurIR) || 0;
-      note.hauteurCavaillon = Number(hauteurCavaillon) || 0;
-    } else if (notationType === "vers_terre") {
-      note.nbVDT = Number(nbVDT) || 0;
-    } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType || "")) {
-      note.fait = fait;
-    }
-
-    onSubmit(note);
-    
-    setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
-    
-    setTimeout(() => {
-      if (mildouInputRef.current && notationType === "maladie") {
-        mildouInputRef.current.focus();
+  const onSubmit = async (values: FormState) => {
+    setIsSaving(true);
+    try {
+      const user = await storage.getCurrentUser();
+      if (!user) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de récupérer l'utilisateur actuel.",
+          variant: "destructive",
+        });
+        return;
       }
-    }, 10);
+
+      const newNotation: HistoryRecord = {
+        id: Math.random().toString(36).substring(7),
+        parcelId: values.parcelId,
+        date: new Date(values.date).getTime(),
+        soilType: values.soilType,
+        cropType: values.cropType,
+        yieldEstimate: values.yieldEstimate || "N/A",
+        notes: values.notes || "N/A",
+        userId: user.id,
+        userName: user.name || "N/A",
+        timestamp: Date.now(),
+      };
+
+      await storage.saveNotation(newNotation);
+
+      toast({
+        title: "Succès",
+        description: "Notation enregistrée avec succès.",
+      });
+
+      onNotationSaved(newNotation);
+      navigate('/');
+
+    } catch (error: any) {
+      console.error("Erreur lors de l'enregistrement de la notation:", error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de l'enregistrement de la notation.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const needsPlacette = !["pollinisateur", "pot_barber", "commentaire"].includes(notationType || "");
+  const handleCancelConfirmation = () => {
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancel = () => {
+    setCancelDialogOpen(false);
+  };
+
+  const handleConfirmCancel = () => {
+    setCancelDialogOpen(false);
+    onCancel();
+  };
 
   return (
-    <Card className="shadow-md">
-      <CardHeader className="py-2 px-4">
-        <CardTitle className="text-lg">Notation</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1 px-4 py-1">
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Réseau</label>
-          <Select 
-            value={selectedReseau?.id.toString()} 
-            onValueChange={(value) => {
-              const reseau = reseaux.find(r => r.id === Number(value));
-              setSelectedReseau(reseau || null);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir un réseau" />
-            </SelectTrigger>
-            <SelectContent>
-              {reseaux.map(reseau => (
-                <SelectItem key={reseau.id} value={reseau.id.toString()}>
-                  {reseau.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {selectedReseau && (
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Parcelle</label>
-            <Select 
-              value={selectedParcelle?.id.toString()} 
-              onValueChange={(value) => {
-                const parcelle = parcelles.find(p => p.id === Number(value));
-                setSelectedParcelle(parcelle || null);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir une parcelle" />
-              </SelectTrigger>
-              <SelectContent>
-                {parcelles
-                  .filter(p => p.reseauId === selectedReseau.id)
-                  .map(parcelle => (
-                    <SelectItem key={parcelle.id} value={parcelle.id.toString()}>
-                      {parcelle.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {selectedParcelle && (
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Type de notation</label>
-            <Select 
-              value={notationType || ""} 
-              onValueChange={(value: NotationType) => {
-                setNotationType(value);
-                setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Type de notation" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="maladie">Maladie</SelectItem>
-                <SelectItem value="pheno">Phéno</SelectItem>
-                <SelectItem value="ravageur">Ravageur</SelectItem>
-                <SelectItem value="commentaire">Commentaire</SelectItem>
-                {isEcumesReseau && (
-                  <>
-                    <SelectItem value="recouvrement">Recouvrement</SelectItem>
-                    <SelectItem value="analyse_sols">Analyse de sols</SelectItem>
-                    <SelectItem value="vers_terre">Vers de terre</SelectItem>
-                    <SelectItem value="pollinisateur">Pollinisateur</SelectItem>
-                    <SelectItem value="pot_barber">Pot Barber</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {selectedParcelle && notationType && needsPlacette && (
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Placette</label>
-            <Select 
-              value={selectedPlacette?.toString()} 
-              onValueChange={(value) => setSelectedPlacette(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir une placette" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedParcelle.placettes.map(placette => (
-                  <SelectItem key={placette.id} value={placette.id.toString()}>
-                    {placette.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {notationType === "maladie" && selectedPlacette !== null && (
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Partie de la plante</label>
-            <Select 
-              value={partie || ""} 
-              onValueChange={(value: PartiePlante) => setPartie(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Partie de la plante" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="feuilles">Feuilles</SelectItem>
-                <SelectItem value="grappe">Grappe</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {notationType === "maladie" && partie && (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Mildiou</label>
-              <Input
-                ref={mildouInputRef}
-                type="number"
-                value={currentNote.mildiou}
-                onChange={e => setCurrentNote({ ...currentNote, mildiou: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Oidium</label>
-              <Input
-                type="number"
-                value={currentNote.oidium}
-                onChange={e => setCurrentNote({ ...currentNote, oidium: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">BR</label>
-              <Input
-                type="number"
-                value={currentNote.BR}
-                onChange={e => setCurrentNote({ ...currentNote, BR: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Botrytis</label>
-              <Input
-                type="number"
-                value={currentNote.botrytis}
-                onChange={e => setCurrentNote({ ...currentNote, botrytis: e.target.value })}
-              />
-            </div>
-          </div>
-        )}
-
-        {notationType === "recouvrement" && selectedPlacette !== null && (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Hauteur IR</label>
-              <Input
-                type="number"
-                value={hauteurIR}
-                onChange={e => setHauteurIR(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Hauteur Cavaillon</label>
-              <Input
-                type="number"
-                value={hauteurCavaillon}
-                onChange={e => setHauteurCavaillon(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
-        {notationType === "vers_terre" && selectedPlacette !== null && (
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Nombre de vers de terre</label>
-            <Input
-              type="number"
-              value={nbVDT}
-              onChange={e => setNbVDT(e.target.value)}
-            />
-          </div>
-        )}
-
-        {["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType || "") && (
-          <div className="flex items-center space-x-2 py-1">
-            <Checkbox 
-              id="fait" 
-              checked={fait} 
-              onCheckedChange={(checked) => setFait(checked === true)}
-            />
-            <label htmlFor="fait" className="text-sm font-medium cursor-pointer">
-              Réalisé
-            </label>
-          </div>
-        )}
-
-        {notationType === "commentaire" && (
-          <div className="space-y-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Commentaire</label>
-              <Textarea 
-                value={commentaire}
-                onChange={(e) => setCommentaire(e.target.value)}
-                placeholder="Saisissez votre commentaire ici..."
-                className="min-h-[100px]"
-              />
-            </div>
-          </div>
-        )}
-
-        {(notationType === "pheno" || notationType === "ravageur") && (
-          <div className="p-2 bg-muted rounded-md text-center text-sm">
-            Les champs pour {notationType === "pheno" ? "phénologie" : "ravageurs"} seront ajoutés dans une future version.
-          </div>
-        )}
-
-        {notationType && (
-          <div className="flex gap-2 pt-1">
-            {notationType === "maladie" && partie && (
-              <Button 
-                variant="default" 
-                className="flex-1" 
-                onClick={handleSubmit}
-                disabled={
-                  !currentNote.mildiou && 
-                  !currentNote.oidium && 
-                  !currentNote.BR && 
-                  !currentNote.botrytis
-                }
-              >
-                Ajouter
-              </Button>
+    <div className="container mx-auto py-10">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <FormField
+            control={form.control}
+            name="parcelId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Identifiant de la parcelle</FormLabel>
+                <FormControl>
+                  <Input placeholder="ID de la parcelle" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-            <Button 
-              variant="secondary" 
-              className="flex-1" 
-              onClick={onFinish}
-              disabled={
-                !selectedParcelle ||
-                (notationType === "maladie" && notes.length === 0) ||
-                (needsPlacette && selectedPlacette === null) ||
-                (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && !fait) ||
-                (notationType === "commentaire" && !commentaire)
-              }
+          />
+
+          <FormField
+            control={form.control}
+            name="date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="soilType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Type de sol</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un type de sol" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="argileux">Argileux</SelectItem>
+                    <SelectItem value="limoneux">Limoneux</SelectItem>
+                    <SelectItem value="sableux">Sableux</SelectItem>
+                    <SelectItem value="tourbeux">Tourbeux</SelectItem>
+                    <SelectItem value="calcaire">Calcaire</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="cropType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Type de culture</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un type de culture" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="mais">Maïs</SelectItem>
+                    <SelectItem value="ble">Blé</SelectItem>
+                    <SelectItem value="soja">Soja</SelectItem>
+                    <SelectItem value="orge">Orge</SelectItem>
+                    <SelectItem value="tournesol">Tournesol</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="yieldEstimate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Estimation du rendement</FormLabel>
+                <FormControl>
+                  <Input placeholder="Estimation du rendement" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notes</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Informations complémentaires"
+                    className="resize-none"
+                    {...field}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <div className="flex justify-between">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleCancelConfirmation}
             >
-              Terminer
+              Annuler
             </Button>
-            <Button 
-              variant="outline" 
-              className="flex-grow-0"
-              onClick={onCancel}
-            >
-              <XCircle className="h-4 w-4" />
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </form>
+      </Form>
+
+      <CancelDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        onConfirm={handleConfirmCancel}
+        onCancel={handleCancel}
+      />
+    </div>
   );
 }

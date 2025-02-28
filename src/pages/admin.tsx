@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,8 +6,8 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/shared/schema";
-import { storage, SystemLog } from "@/lib/storage";
+import { User, SystemLog } from "@/shared/schema";
+import { storage } from "@/lib/storage";
 import { ReloadIcon } from "@radix-ui/react-icons";
 
 export default function Admin() {
@@ -29,7 +30,7 @@ export default function Admin() {
           variant: "destructive"
         });
       } else {
-        setLoading(false);
+        setIsLoading(false); // Changed from setLoading to setIsLoading
       }
     };
     
