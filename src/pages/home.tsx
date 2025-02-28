@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Parcelle, Note, HistoryRecord, NotationType, PartiePlante, Reseau } from "@/shared/schema";
 import { storage } from "@/lib/storage/index";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Trash2, XCircle, Check, Image, Upload } from "lucide-react";
+import { Trash2, XCircle, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,14 +42,11 @@ export default function Home() {
   const [fait, setFait] = useState<boolean>(false);
   // Nouvel état pour le commentaire
   const [commentaire, setCommentaire] = useState<string>("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string>("");
   // État pour suivre d'où on vient
   const [fromHistory, setFromHistory] = useState<boolean>(false);
   
   const { toast } = useToast();
   const mildouInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Détecter si l'on vient de l'historique
@@ -115,30 +111,7 @@ export default function Home() {
     setNbVDT("");
     setFait(false);
     setCommentaire("");
-    setPhoto(null);
-    setPhotoUrl("");
     setShowNotes(false);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setPhoto(file);
-      
-      // Prévisualiser l'image
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target && typeof event.target.result === 'string') {
-          setPhotoUrl(event.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
-
-      toast({
-        title: "Photo ajoutée",
-        description: `Photo "${file.name}" ajoutée`,
-      });
-    }
   };
 
   const handleSubmit = () => {
@@ -205,7 +178,7 @@ export default function Home() {
   };
 
   const handleCancel = () => {
-    if (notes.length > 0 || commentaire || photo) {
+    if (notes.length > 0 || commentaire) {
       setShowCancelDialog(true);
     } else {
       resetNotation();
@@ -225,8 +198,6 @@ export default function Home() {
     setNbVDT("");
     setFait(false);
     setCommentaire("");
-    setPhoto(null);
-    setPhotoUrl("");
     setShowNotes(false);
     toast({
       title: "Notation annulée",
@@ -334,11 +305,6 @@ export default function Home() {
         return;
       }
 
-      let photoDataUrl = "";
-      if (photo) {
-        photoDataUrl = await storage.savePhoto(photo);
-      }
-
       // Créer l'enregistrement d'historique
       const historyRecord: HistoryRecord = {
         id: Date.now(),
@@ -375,7 +341,6 @@ export default function Home() {
         historyRecord.fait = fait;
       } else if (notationType === "commentaire") {
         historyRecord.commentaire = commentaire;
-        historyRecord.photoUrl = photoDataUrl;
       }
 
       await storage.saveHistory(historyRecord);
@@ -408,8 +373,6 @@ export default function Home() {
       setNbVDT("");
       setFait(false);
       setCommentaire("");
-      setPhoto(null);
-      setPhotoUrl("");
       setShowNotes(false);
     } else {
       // Réinitialiser tout et redirectionner vers l'historique
@@ -499,8 +462,6 @@ export default function Home() {
                   setNotes([]);
                   setFait(false);
                   setCommentaire("");
-                  setPhoto(null);
-                  setPhotoUrl("");
                   // Réinitialiser la placette et la partie
                   setSelectedPlacette(null);
                   setPartie(null);
@@ -660,49 +621,6 @@ export default function Home() {
                   placeholder="Saisissez votre commentaire ici..."
                   className="min-h-[100px]"
                 />
-              </div>
-              
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Photo</label>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-4 w-4 mr-1" />
-                    Ajouter une photo
-                  </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                  />
-                </div>
-                
-                {photoUrl && (
-                  <div className="mt-2 relative">
-                    <img 
-                      src={photoUrl} 
-                      alt="Photo" 
-                      className="max-h-[200px] rounded-md object-cover"
-                    />
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      className="absolute top-1 right-1"
-                      onClick={() => {
-                        setPhoto(null);
-                        setPhotoUrl("");
-                      }}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           )}

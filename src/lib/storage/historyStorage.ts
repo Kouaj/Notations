@@ -31,18 +31,4 @@ export class HistoryStorage extends BaseStorage {
       store => store.delete(id)
     );
   }
-
-  async savePhoto(photo: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        resolve(dataUrl);
-      };
-      reader.onerror = () => {
-        reject(new Error('Failed to read file'));
-      };
-      reader.readAsDataURL(photo);
-    });
-  }
 }
