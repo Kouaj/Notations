@@ -1,21 +1,31 @@
 
-import { Parcelle, Reseau, HistoryRecord } from '@/shared/schema';
+import { Parcelle, Reseau, HistoryRecord, User } from '@/shared/schema';
 
 // Constants for IndexedDB
 export const DB_NAME = 'agricultureDB';
-export const DB_VERSION = 3; // Incrémenté pour ajouter le store réseaux
+export const DB_VERSION = 4; // Incrémenté pour ajouter le store users
 export const STORES = {
+  USERS: 'users',
   RESEAUX: 'reseaux',
   PARCELLES: 'parcelles',
   HISTORY: 'history',
   SELECTED_PARCELLE: 'selectedParcelle',
-  SELECTED_RESEAU: 'selectedReseau'
+  SELECTED_RESEAU: 'selectedReseau',
+  CURRENT_USER: 'currentUser'
 } as const;
 
 // Storage interface for IndexedDB operations
 export interface IDBStorage {
+  // Users
+  getUsers(): Promise<User[]>;
+  saveUser(user: User): Promise<void>;
+  getUserById(id: string): Promise<User | null>;
+  getCurrentUser(): Promise<User | null>;
+  setCurrentUser(user: User | null): Promise<void>;
+  
   // Réseaux
   getReseaux(): Promise<Reseau[]>;
+  getReseauxByUser(userId: string): Promise<Reseau[]>;
   saveReseau(reseau: Reseau): Promise<void>;
   deleteReseau(id: number): Promise<void>;
   updateReseau(reseau: Reseau): Promise<void>;
@@ -24,7 +34,8 @@ export interface IDBStorage {
   
   // Parcelles
   getParcelles(): Promise<Parcelle[]>;
-  getParcellesByReseau(reseauId: number): Promise<Parcelle[]>;
+  getParcellesByUser(userId: string): Promise<Parcelle[]>;
+  getParcellesByReseau(reseauId: number, userId: string): Promise<Parcelle[]>;
   saveParcelle(parcelle: Parcelle): Promise<void>;
   deleteParcelle(id: number): Promise<void>;
   updateParcelle(parcelle: Parcelle): Promise<void>;
@@ -33,6 +44,7 @@ export interface IDBStorage {
   
   // Historique
   getHistory(): Promise<HistoryRecord[]>;
+  getHistoryByUser(userId: string): Promise<HistoryRecord[]>;
   saveHistory(record: HistoryRecord): Promise<void>;
   deleteHistory(id: number): Promise<void>;
 }
@@ -61,6 +73,10 @@ class IndexedDBStorage implements IDBStorage {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
 
+        if (!db.objectStoreNames.contains(STORES.USERS)) {
+          db.createObjectStore(STORES.USERS, { keyPath: 'id' });
+        }
+
         if (!db.objectStoreNames.contains(STORES.RESEAUX)) {
           db.createObjectStore(STORES.RESEAUX, { keyPath: 'id' });
         }
@@ -79,6 +95,10 @@ class IndexedDBStorage implements IDBStorage {
 
         if (!db.objectStoreNames.contains(STORES.SELECTED_RESEAU)) {
           db.createObjectStore(STORES.SELECTED_RESEAU);
+        }
+
+        if (!db.objectStoreNames.contains(STORES.CURRENT_USER)) {
+          db.createObjectStore(STORES.CURRENT_USER);
         }
       };
     });
@@ -109,6 +129,47 @@ class IndexedDBStorage implements IDBStorage {
     });
   }
 
+  // Users
+  async getUsers(): Promise<User[]> {
+    return this.performTransaction(
+      STORES.USERS,
+      'readonly',
+      store => store.getAll()
+    );
+  }
+
+  async saveUser(user: User): Promise<void> {
+    await this.performTransaction(
+      STORES.USERS,
+      'readwrite',
+      store => store.put(user)
+    );
+  }
+
+  async getUserById(id: string): Promise<User | null> {
+    return this.performTransaction(
+      STORES.USERS,
+      'readonly',
+      store => store.get(id)
+    );
+  }
+
+  async getCurrentUser(): Promise<User | null> {
+    return this.performTransaction(
+      STORES.CURRENT_USER,
+      'readonly',
+      store => store.get('current')
+    );
+  }
+
+  async setCurrentUser(user: User | null): Promise<void> {
+    await this.performTransaction(
+      STORES.CURRENT_USER,
+      'readwrite',
+      store => store.put(user, 'current')
+    );
+  }
+
   // Réseaux
   async getReseaux(): Promise<Reseau[]> {
     return this.performTransaction(
@@ -116,6 +177,11 @@ class IndexedDBStorage implements IDBStorage {
       'readonly',
       store => store.getAll()
     );
+  }
+
+  async getReseauxByUser(userId: string): Promise<Reseau[]> {
+    const reseaux = await this.getReseaux();
+    return reseaux.filter(r => r.userId === userId);
   }
 
   async saveReseau(reseau: Reseau): Promise<void> {
@@ -167,8 +233,13 @@ class IndexedDBStorage implements IDBStorage {
     );
   }
 
-  async getParcellesByReseau(reseauId: number): Promise<Parcelle[]> {
+  async getParcellesByUser(userId: string): Promise<Parcelle[]> {
     const parcelles = await this.getParcelles();
+    return parcelles.filter(p => p.userId === userId);
+  }
+
+  async getParcellesByReseau(reseauId: number, userId: string): Promise<Parcelle[]> {
+    const parcelles = await this.getParcellesByUser(userId);
     return parcelles.filter(p => p.reseauId === reseauId);
   }
 
@@ -219,6 +290,11 @@ class IndexedDBStorage implements IDBStorage {
       'readonly',
       store => store.getAll()
     );
+  }
+
+  async getHistoryByUser(userId: string): Promise<HistoryRecord[]> {
+    const history = await this.getHistory();
+    return history.filter(h => h.userId === userId);
   }
 
   async saveHistory(record: HistoryRecord): Promise<void> {

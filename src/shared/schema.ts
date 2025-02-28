@@ -4,9 +4,16 @@ import { z } from "zod";
 export type NotationType = "maladie" | "pheno" | "ravageur";
 export type PartiePlante = "feuilles" | "grappe";
 
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
+
 export interface Reseau {
   id: number;
   name: string;
+  userId: string;
 }
 
 export interface Parcelle {
@@ -14,6 +21,7 @@ export interface Parcelle {
   name: string;
   reseauId: number;
   reseauName: string;
+  userId: string;
   placettes: Placette[];
 }
 
@@ -48,6 +56,7 @@ export interface HistoryRecord {
   type: NotationType;
   partie: PartiePlante;
   date: string;
+  userId: string;
 }
 
 export interface HistoryGroup {
@@ -58,9 +67,16 @@ export interface HistoryGroup {
   records: HistoryRecord[];
 }
 
+export const userSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  name: z.string().optional()
+});
+
 export const reseauSchema = z.object({
   id: z.number(),
-  name: z.string().min(1)
+  name: z.string().min(1),
+  userId: z.string()
 });
 
 export const parcelleSchema = z.object({
@@ -68,6 +84,7 @@ export const parcelleSchema = z.object({
   name: z.string().min(1),
   reseauId: z.number(),
   reseauName: z.string(),
+  userId: z.string(),
   placettes: z.array(z.object({
     id: z.number(),
     name: z.string().min(1),
