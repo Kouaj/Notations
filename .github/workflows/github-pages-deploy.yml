@@ -22,14 +22,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
         
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
           
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --ignore-scripts
+        run: |
+          npm ci || npm install --legacy-peer-deps --ignore-scripts
         
       - name: Build
         run: npm run build
@@ -40,4 +44,6 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
+          clean: true
