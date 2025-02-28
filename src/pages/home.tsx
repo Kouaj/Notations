@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Parcelle, Note, HistoryRecord, NotationType, PartiePlante, Reseau } from "@/shared/schema";
-import { storage } from "@/lib/storage";
+import { storage } from "@/lib/storage/index";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 
@@ -153,27 +152,47 @@ export default function Home() {
       return;
     }
 
-    const results = calculateResults();
-    if (!results) return;
+    try {
+      const currentUser = await storage.getCurrentUser();
+      if (!currentUser) {
+        toast({
+          title: "Erreur",
+          description: "Vous devez être connecté pour enregistrer une notation",
+          variant: "destructive"
+        });
+        return;
+      }
 
-    const historyRecord: HistoryRecord = {
-      id: Date.now(),
-      reseauName: selectedReseau.name,
-      reseauId: selectedReseau.id,
-      parcelleName: selectedParcelle.name,
-      parcelleId: selectedParcelle.id,
-      placetteId: selectedPlacette,
-      notes,
-      count: notes.length,
-      frequency: results.frequency,
-      intensity: results.intensity,
-      type: notationType,
-      partie: partie,
-      date: new Date().toISOString()
-    };
+      const results = calculateResults();
+      if (!results) return;
 
-    await storage.saveHistory(historyRecord);
-    setShowContinueDialog(true);
+      const historyRecord: HistoryRecord = {
+        id: Date.now(),
+        reseauName: selectedReseau.name,
+        reseauId: selectedReseau.id,
+        parcelleName: selectedParcelle.name,
+        parcelleId: selectedParcelle.id,
+        placetteId: selectedPlacette,
+        notes,
+        count: notes.length,
+        frequency: results.frequency,
+        intensity: results.intensity,
+        type: notationType,
+        partie: partie,
+        date: new Date().toISOString(),
+        userId: currentUser.id
+      };
+
+      await storage.saveHistory(historyRecord);
+      setShowContinueDialog(true);
+    } catch (error) {
+      console.error("Erreur lors de l'enregistrement de la notation:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de l'enregistrement",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleContinue = (shouldContinue: boolean) => {

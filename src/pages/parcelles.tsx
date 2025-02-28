@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +47,16 @@ export default function Parcelles() {
 
   const handleSubmit = async () => {
     try {
+      const currentUser = await storage.getCurrentUser();
+      if (!currentUser) {
+        toast({
+          title: "Erreur",
+          description: "Vous devez être connecté pour créer une parcelle",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const selectedReseau = reseaux.find(r => r.id === Number(newParcelle.reseauId));
       
       if (!selectedReseau) {
@@ -64,6 +73,7 @@ export default function Parcelles() {
         name: newParcelle.name,
         reseauId: Number(newParcelle.reseauId),
         reseauName: selectedReseau.name,
+        userId: currentUser.id,
         placettes: newParcelle.placettes.map((p, index) => ({
           id: index + 1,
           name: p.name,

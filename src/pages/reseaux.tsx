@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,9 +44,20 @@ export default function Reseaux() {
         return;
       }
 
+      const currentUser = await storage.getCurrentUser();
+      if (!currentUser) {
+        toast({
+          title: "Erreur",
+          description: "Vous devez être connecté pour créer un réseau",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const newReseauData: Reseau = {
         id: Date.now(),
-        name: newReseau.name
+        name: newReseau.name,
+        userId: currentUser.id
       };
 
       console.log("Tentative de création du réseau:", newReseauData);

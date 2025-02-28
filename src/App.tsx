@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Switch, Route, Router, useLocation, useRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -89,6 +88,31 @@ function ProtectedRoute({ component: Component, ...rest }: { component: React.Co
   }
 
   return <Component {...rest} />;
+}
+
+function AppRoutes() {
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    // Quick fix for initial blank page when navigating directly to the app
+    if (location === "/") {
+      setLocation("/home");
+    }
+  }, [location, setLocation]);
+
+  return (
+    <>
+      <Switch>
+        <Route path="/home" component={Home} />
+        <Route path="/reseaux" component={Reseaux} />
+        <Route path="/parcelles" component={Parcelles} />
+        <Route path="/history" component={History} />
+        <Route path="/auth/login" component={Login} />
+        <Route path="/auth/register" component={Register} />
+        <Route component={NotFound} />
+      </Switch>
+    </>
+  );
 }
 
 function RouterContent() {
