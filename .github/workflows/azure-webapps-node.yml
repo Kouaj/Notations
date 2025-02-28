@@ -33,10 +33,19 @@ jobs:
       run: npm install
       
     - name: npm build
-      run: npm run build
+      run: npm run build --verbose
       
-    - name: List build output
-      run: ls -la dist
+    - name: Debug environment
+      if: always()
+      run: |
+        echo "Node version:"
+        node --version
+        echo "NPM version:" 
+        npm --version
+        echo "Directory structure:"
+        ls -la
+        echo "Build output:"
+        ls -la dist || echo "No dist directory found"
 
     - name: Upload artifact for deployment job
       uses: actions/upload-artifact@v4
