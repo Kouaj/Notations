@@ -17,7 +17,7 @@ env:
   NODE_VERSION: '20.x'
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,7 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
           
       - name: Install dependencies
         run: npm install --legacy-peer-deps --ignore-scripts
@@ -37,17 +36,8 @@ jobs:
         env:
           CI: false
           
-      - name: Configure Pages
-        if: success()
-        uses: actions/configure-pages@v4
-        
-      - name: Upload artifact
-        if: success()
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: './dist'
-          
-      - name: Deploy to GitHub Pages
-        if: success()
-        id: deployment
-        uses: actions/deploy-pages@v4
+          folder: dist
+          branch: gh-pages

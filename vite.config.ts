@@ -6,12 +6,6 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Récupérer le chemin de base du projet pour GitHub Pages
-  // Dans le cas d'un déploiement local, utiliser '/'
-  const base = process.env.NODE_ENV === 'production' 
-    ? '/' + (process.env.GITHUB_REPOSITORY?.split('/')[1] || '')
-    : '/';
-
   return {
     server: {
       host: "::",
@@ -26,7 +20,7 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    base: './', // Utilisez './' pour les chemins relatifs
+    base: './', // Chemins relatifs pour GitHub Pages
     build: {
       outDir: 'dist',
       emptyOutDir: true,
