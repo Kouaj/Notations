@@ -121,6 +121,21 @@ function AppRoutes() {
 }
 
 function RouterContent() {
+  const [, setLocation] = useLocation();
+  
+  // Check authentication status on initial load
+  useEffect(() => {
+    const checkAuth = async () => {
+      const user = await storage.getCurrentUser();
+      // If no user is logged in, redirect to login page
+      if (!user) {
+        setLocation('/auth/login');
+      }
+    };
+    
+    checkAuth();
+  }, [setLocation]);
+
   return (
     <div className="min-h-screen bg-background">
       <Switch>
