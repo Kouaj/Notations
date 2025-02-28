@@ -47,7 +47,6 @@ export default function Home() {
       if (selectedReseau) {
         setSelectedReseau(selectedReseau);
         
-        // Filtrer les parcelles en fonction du réseau sélectionné
         const filteredParcelles = parcelles.filter(p => p.reseauId === selectedReseau.id);
         
         if (selectedParcelle && selectedParcelle.reseauId === selectedReseau.id) {
@@ -59,11 +58,9 @@ export default function Home() {
     });
   }, []);
 
-  // Mettre à jour les parcelles quand le réseau sélectionné change
   useEffect(() => {
     if (selectedReseau) {
       const filteredParcelles = parcelles.filter(p => p.reseauId === selectedReseau.id);
-      // Réinitialiser la parcelle sélectionnée si elle n'appartient pas au réseau sélectionné
       if (selectedParcelle && selectedParcelle.reseauId !== selectedReseau.id) {
         setSelectedParcelle(null);
         setSelectedPlacette(null);
@@ -94,7 +91,6 @@ export default function Home() {
     setNotes([...notes, note]);
     setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
     
-    // Garder le focus sur le premier champ pour que le clavier reste ouvert sur mobile
     setTimeout(() => {
       if (mildouInputRef.current) {
         mildouInputRef.current.focus();
@@ -216,7 +212,6 @@ export default function Home() {
           <CardTitle>Notation des maladies</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Étape 1: Sélection du réseau */}
           <div className="space-y-2">
             <label>Réseau</label>
             <Select value={selectedReseau?.id.toString()} onValueChange={(value) => {
@@ -239,7 +234,6 @@ export default function Home() {
             </Select>
           </div>
 
-          {/* Étape 2: Sélection de la parcelle */}
           {selectedReseau && (
             <div className="space-y-2">
               <label>Parcelle</label>
@@ -265,7 +259,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Étape 3: Sélection de la placette */}
           {selectedParcelle && (
             <div className="space-y-2">
               <label>Placette</label>
@@ -284,7 +277,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Étape 4: Type de notation */}
           {selectedPlacette !== null && (
             <div className="space-y-2">
               <label>Type de notation</label>
@@ -301,7 +293,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Étape 5: Partie de la plante (seulement pour les maladies) */}
           {notationType === "maladie" && (
             <div className="space-y-2">
               <label>Partie de la plante</label>
@@ -317,7 +308,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Formulaire de notation pour les maladies */}
           {notationType === "maladie" && partie && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -356,14 +346,12 @@ export default function Home() {
             </div>
           )}
 
-          {/* Autres types de notation à implémenter */}
           {(notationType === "pheno" || notationType === "ravageur") && (
             <div className="p-4 bg-muted rounded-md text-center">
               Les champs pour {notationType === "pheno" ? "phénologie" : "ravageurs"} seront ajoutés dans une future version.
             </div>
           )}
 
-          {/* Boutons d'action */}
           {notationType && (notationType !== "maladie" || partie) && (
             <div className="flex gap-4">
               <Button onClick={handleSubmit} className="flex-1">
@@ -377,7 +365,6 @@ export default function Home() {
         </CardContent>
       </Card>
 
-      {/* Badge affichant le nombre de notes en cours */}
       {notes.length > 0 && (
         <div className="flex items-center justify-center py-2">
           <Badge variant="outline" className="text-sm">
@@ -386,7 +373,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Affichage des résultats */}
       {results && (
         <Card>
           <CardHeader>
@@ -417,7 +403,6 @@ export default function Home() {
               </Table>
             </ScrollArea>
             
-            {/* Bouton pour afficher/masquer les notes */}
             <Button 
               variant="outline" 
               onClick={() => setShowNotes(!showNotes)}
@@ -426,7 +411,6 @@ export default function Home() {
               {showNotes ? "Masquer les notes" : "Afficher les notes"}
             </Button>
             
-            {/* Liste des notes avec possibilité de suppression */}
             {showNotes && notes.length > 0 && (
               <ScrollArea className="h-[200px] border rounded-md">
                 <Table>
@@ -467,7 +451,6 @@ export default function Home() {
         </Card>
       )}
 
-      {/* Dialogue de confirmation pour continuer ou revenir aux parcelles */}
       <AlertDialog open={showContinueDialog} onOpenChange={setShowContinueDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
