@@ -18,29 +18,62 @@ jobs:
         node-version: '20.x'
         
     - name: Install dependencies
-      run: |
-        npm ci
+      run: npm ci
         
     - name: Build
-      run: |
-        npm run build
+      run: npm run build
         
     - name: Prepare for deployment
       run: |
-        echo "Creating web.config file"
+        # Make sure destination directory exists
         mkdir -p dist
-        cp web.config dist/
+        # Check if web.config exists
+        if [ -f "web.config" ]; then
+          echo "Found web.config, copying to dist folder"
+          cp web.config dist/
+        else
+          echo "Creating web.config file"
+          cat > dist/web.config << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <rule name="React Routes" stopProcessing="true">
+          <match url=".*" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="/" />
+        </rule>
+      </rules>
+    </rewrite>
+    <staticContent>
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      <mimeMap fileExtension=".woff" mimeType="application/font-woff" />
+      <mimeMap fileExtension=".woff2" mimeType="application/font-woff" />
+    </staticContent>
+  </system.webServer>
+</configuration>
+EOF
+        fi
         
-    - name: Check build output
+    - name: Verify files for deployment
       run: |
-        echo "Node version:"
-        node -v
-        echo "NPM version:"
-        npm -v
-        echo "Build output files:"
+        echo "Node version: $(node -v)"
+        echo "NPM version: $(npm -v)"
+        echo "Checking build output directory:"
         ls -la dist/
-        echo "web.config content:"
-        cat dist/web.config
+        echo "Checking if web.config exists:"
+        if [ -f "dist/web.config" ]; then
+          echo "web.config exists in dist folder"
+          echo "Contents of web.config:"
+          cat dist/web.config
+        else
+          echo "ERROR: web.config not found in dist folder"
+          exit 1
+        fi
         
     - name: Deploy to Azure
       uses: azure/webapps-deploy@v2
