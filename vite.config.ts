@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  base: "./", // Ajout de cette ligne pour le déploiement GitHub Pages
   build: {
     outDir: 'dist',
     emptyOutDir: true,
