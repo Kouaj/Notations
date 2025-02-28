@@ -28,6 +28,7 @@ jobs:
     - name: Prepare for deployment
       run: |
         echo "Creating web.config file"
+        mkdir -p dist
         cat > dist/web.config << 'EOL'
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
