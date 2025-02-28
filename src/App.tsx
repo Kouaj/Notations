@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from "react";
-import { Switch, Route, Router, useLocation, useRouter } from "wouter";
+import { Switch, Route, Router, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -60,7 +61,11 @@ function Navigation() {
 }
 
 // Protected route wrapper
-function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType, path?: string }) {
+interface ProtectedRouteProps {
+  component: React.ComponentType<any>;
+}
+
+function ProtectedRoute({ component: Component }: ProtectedRouteProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [, setLocation] = useLocation();
 
@@ -87,7 +92,7 @@ function ProtectedRoute({ component: Component, ...rest }: { component: React.Co
     return null; // Redirect is handled in useEffect
   }
 
-  return <Component {...rest} />;
+  return <Component />;
 }
 
 function AppRoutes() {
@@ -119,8 +124,12 @@ function RouterContent() {
   return (
     <div className="min-h-screen bg-background">
       <Switch>
-        <Route path="/auth/login" component={Login} />
-        <Route path="/auth/register" component={Register} />
+        <Route path="/auth/login">
+          {() => <Login />}
+        </Route>
+        <Route path="/auth/register">
+          {() => <Register />}
+        </Route>
         <Route path="/auth">
           {() => {
             const [, setLocation] = useLocation();
@@ -131,8 +140,9 @@ function RouterContent() {
           }}
         </Route>
         <Route>
-          {({ pathname }) => {
+          {(params) => {
             // Only render Navigation for non-auth routes
+            const pathname = params?.pathname || '';
             const isAuthRoute = pathname.startsWith('/auth');
             
             return (
@@ -140,10 +150,18 @@ function RouterContent() {
                 {!isAuthRoute && <Navigation />}
                 <main className="container mx-auto px-4 py-6">
                   <Switch>
-                    <Route path="/" component={() => <ProtectedRoute component={Home} />} />
-                    <Route path="/parcelles" component={() => <ProtectedRoute component={Parcelles} />} />
-                    <Route path="/reseaux" component={() => <ProtectedRoute component={Reseaux} />} />
-                    <Route path="/history" component={() => <ProtectedRoute component={History} />} />
+                    <Route path="/">
+                      {() => <ProtectedRoute component={Home} />}
+                    </Route>
+                    <Route path="/parcelles">
+                      {() => <ProtectedRoute component={Parcelles} />}
+                    </Route>
+                    <Route path="/reseaux">
+                      {() => <ProtectedRoute component={Reseaux} />}
+                    </Route>
+                    <Route path="/history">
+                      {() => <ProtectedRoute component={History} />}
+                    </Route>
                     {!isAuthRoute && <Route component={NotFound} />}
                   </Switch>
                 </main>
