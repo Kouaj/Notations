@@ -6,7 +6,11 @@ import './index.css';
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
-  createRoot(rootElement).render(<React.StrictMode><App /></React.StrictMode>);
+  createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 } else {
   console.error("Failed to find root element");
 }

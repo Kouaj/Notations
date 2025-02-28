@@ -55,7 +55,6 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
-          if-no-files-found: error # Pour avoir un message d'erreur explicite
 
   # Déploiement sur GitHub Pages
   deploy:
