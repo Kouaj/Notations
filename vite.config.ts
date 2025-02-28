@@ -6,6 +6,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  console.log("Running Vite in", mode, "mode");
   return {
     server: {
       host: "::",
@@ -24,7 +25,13 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       emptyOutDir: true,
-      sourcemap: false
+      sourcemap: false,
+      minify: true,
+      rollupOptions: {
+        output: {
+          manualChunks: undefined, // Désactiver le chunking pour simplifier
+        }
+      }
     }
   };
 });

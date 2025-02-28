@@ -33,10 +33,20 @@ jobs:
         run: |
           npm install --force --legacy-peer-deps
         
+      - name: List directory content before build
+        run: ls -la
+        
       - name: Build
         run: npm run build
         env:
           CI: false
+          
+      - name: List directory content after build
+        run: |
+          echo "Listing content of current directory:"
+          ls -la
+          echo "Listing content of dist directory (if exists):"
+          ls -la dist || echo "dist directory does not exist"
           
       - name: Setup Pages
         uses: actions/configure-pages@v3
@@ -45,6 +55,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
+          if-no-files-found: error # Pour avoir un message d'erreur explicite
 
   # Déploiement sur GitHub Pages
   deploy:
