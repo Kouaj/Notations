@@ -19,8 +19,7 @@ jobs:
         
     - name: Install dependencies
       run: |
-        npm cache clean --force
-        npm install
+        npm ci
         
     - name: Build
       run: |
@@ -29,8 +28,18 @@ jobs:
         
     - name: Check build output
       run: |
+        echo "Node version:"
+        node -v
+        echo "NPM version:"
+        npm -v
+        echo "Current directory:"
+        pwd
+        echo "Files in current directory:"
+        ls -la
         echo "Build output files:"
         ls -la dist/
+        echo "Package.json content:"
+        cat package.json
         
     - name: Deploy to Azure
       uses: azure/webapps-deploy@v2
