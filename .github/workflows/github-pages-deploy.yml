@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          persist-credentials: false
         
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -33,28 +31,29 @@ jobs:
           
       - name: Install dependencies
         run: |
-          npm ci || npm install --legacy-peer-deps --ignore-scripts
+          npm ci || npm install
         
       - name: Build
         run: npm run build
         env:
           CI: false
           
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
         with:
-          folder: dist
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
-          clean: true
+          path: './dist'
 
-  # Ajout d'une tâche spécifique pour GitHub Pages
-  deploy-pages:
-    needs: build
+  # Déploiement sur GitHub Pages
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    
+    needs: build
     steps:
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
