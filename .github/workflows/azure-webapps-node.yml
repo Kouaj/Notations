@@ -24,13 +24,6 @@ jobs:
         node -v
         npm -v
         
-    - name: List lock file and package.json for debugging
-      run: |
-        echo "Package.json contents:"
-        cat package.json
-        echo "Lock file exists?"
-        ls -la package-lock.json || echo "No package-lock.json found"
-        
     - name: Install dependencies with specific options
       run: |
         npm install --legacy-peer-deps --ignore-scripts
@@ -68,22 +61,25 @@ jobs:
         
     - name: Verify files for deployment
       run: |
-        echo "Node version: $(node -v)"
-        echo "NPM version: $(npm -v)"
         echo "Checking build output directory:"
         ls -la dist/
         echo "Checking if web.config exists:"
         if [ -f "dist/web.config" ]; then
           echo "web.config exists in dist folder"
-          cat dist/web.config
         else
           echo "ERROR: web.config not found in dist folder"
           exit 1
         fi
         
-    - name: Deploy to Azure
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        enable-AzPSSession: true
+      
+    - name: 'Deploy to Azure WebApp'
       uses: azure/webapps-deploy@v2
       with:
         app-name: 'friendly-copy-crafter'
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        slot-name: 'Production'
         package: './dist'
