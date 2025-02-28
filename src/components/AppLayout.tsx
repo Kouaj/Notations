@@ -19,15 +19,15 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
       {!isAuthRoute && (
-        <header className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-4 shadow-md">
-          <div className="container mx-auto px-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold">Notations Viticoles</h1>
+        <header className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-3 shadow-md">
+          <div className="container mx-auto px-3 flex justify-between items-center">
+            <h1 className="text-lg font-bold">Notations Viticoles</h1>
             <UserMenu />
           </div>
         </header>
       )}
       
-      <main className="container mx-auto px-4 py-6 pb-24">
+      <main className="container mx-auto px-2 py-2 pb-20">
         <Switch>
           <Route path="/">
             {() => <ProtectedRoute component={Home} />}

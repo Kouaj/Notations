@@ -1,7 +1,6 @@
-
 import { z } from "zod";
 
-export type NotationType = "maladie" | "pheno" | "ravageur";
+export type NotationType = "maladie" | "pheno" | "ravageur" | "recouvrement" | "analyse_sols" | "vers_terre" | "pollinisateur" | "pot_barber";
 export type PartiePlante = "feuilles" | "grappe";
 
 export interface User {
@@ -40,6 +39,11 @@ export interface Note {
   partie: PartiePlante;
   type?: NotationType;
   date: string;
+  // Nouveaux champs pour types spécifiques
+  hauteurIR?: number;
+  hauteurCavaillon?: number;
+  nbVDT?: number;
+  fait?: boolean;
 }
 
 export interface HistoryRecord {
@@ -57,6 +61,11 @@ export interface HistoryRecord {
   partie: PartiePlante;
   date: string;
   userId: string;
+  // Nouveaux champs pour types spécifiques
+  hauteurIR?: number;
+  hauteurCavaillon?: number;
+  nbVDT?: number;
+  fait?: boolean;
 }
 
 export interface HistoryGroup {

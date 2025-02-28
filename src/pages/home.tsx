@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Parcelle, Note, HistoryRecord, NotationType, PartiePlante, Reseau } from "@/shared/schema";
 import { storage } from "@/lib/storage/index";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, XCircle, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Home() {
   const [_, setLocation] = useLocation();
@@ -31,6 +33,13 @@ export default function Home() {
     botrytis: ""
   });
   const [showContinueDialog, setShowContinueDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  // Nouveaux états pour les types spécifiques
+  const [hauteurIR, setHauteurIR] = useState<string>("");
+  const [hauteurCavaillon, setHauteurCavaillon] = useState<string>("");
+  const [nbVDT, setNbVDT] = useState<string>("");
+  const [fait, setFait] = useState<boolean>(false);
+  
   const { toast } = useToast();
   const mildouInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,7 +87,7 @@ export default function Home() {
       return;
     }
 
-    const note: Note = {
+    let note: Note = {
       mildiou: Number(currentNote.mildiou) || 0,
       oidium: Number(currentNote.oidium) || 0,
       BR: Number(currentNote.BR) || 0,
@@ -88,11 +97,27 @@ export default function Home() {
       date: new Date().toISOString()
     };
 
+    // Ajouter les champs spécifiques selon le type de notation
+    if (notationType === "recouvrement") {
+      note.hauteurIR = Number(hauteurIR) || 0;
+      note.hauteurCavaillon = Number(hauteurCavaillon) || 0;
+    } else if (notationType === "vers_terre") {
+      note.nbVDT = Number(nbVDT) || 0;
+    } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType)) {
+      note.fait = fait;
+    }
+
     setNotes([...notes, note]);
+    
+    // Réinitialiser les valeurs des champs
     setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
+    setHauteurIR("");
+    setHauteurCavaillon("");
+    setNbVDT("");
+    setFait(false);
     
     setTimeout(() => {
-      if (mildouInputRef.current) {
+      if (mildouInputRef.current && notationType === "maladie") {
         mildouInputRef.current.focus();
       }
     }, 10);
@@ -106,6 +131,33 @@ export default function Home() {
     toast({
       title: "Note supprimée",
       description: "La note a été supprimée avec succès",
+    });
+  };
+
+  const handleCancel = () => {
+    if (notes.length > 0) {
+      setShowCancelDialog(true);
+    } else {
+      resetNotation();
+    }
+  };
+
+  const confirmCancel = () => {
+    resetNotation();
+    setShowCancelDialog(false);
+  };
+
+  const resetNotation = () => {
+    setNotes([]);
+    setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
+    setHauteurIR("");
+    setHauteurCavaillon("");
+    setNbVDT("");
+    setFait(false);
+    setShowNotes(false);
+    toast({
+      title: "Notation annulée",
+      description: "La notation a été annulée avec succès",
     });
   };
 
@@ -159,27 +211,62 @@ export default function Home() {
         return;
       }
 
-      const results = calculateResults();
-      if (!results) return;
+      // Pour les types de notation autres que "maladie", on crée un enregistrement simplifié
+      if (notationType !== "maladie") {
+        const latestNote = notes[notes.length - 1];
+        const historyRecord: HistoryRecord = {
+          id: Date.now(),
+          reseauName: selectedReseau.name,
+          reseauId: selectedReseau.id,
+          parcelleName: selectedParcelle.name,
+          parcelleId: selectedParcelle.id,
+          placetteId: selectedPlacette,
+          notes: notes,
+          count: notes.length,
+          frequency: {},
+          intensity: {},
+          type: notationType,
+          partie: partie,
+          date: new Date().toISOString(),
+          userId: currentUser.id
+        };
 
-      const historyRecord: HistoryRecord = {
-        id: Date.now(),
-        reseauName: selectedReseau.name,
-        reseauId: selectedReseau.id,
-        parcelleName: selectedParcelle.name,
-        parcelleId: selectedParcelle.id,
-        placetteId: selectedPlacette,
-        notes,
-        count: notes.length,
-        frequency: results.frequency,
-        intensity: results.intensity,
-        type: notationType,
-        partie: partie,
-        date: new Date().toISOString(),
-        userId: currentUser.id
-      };
+        // Ajouter les propriétés spécifiques au type de notation
+        if (notationType === "recouvrement" && latestNote.hauteurIR !== undefined && latestNote.hauteurCavaillon !== undefined) {
+          historyRecord.hauteurIR = latestNote.hauteurIR;
+          historyRecord.hauteurCavaillon = latestNote.hauteurCavaillon;
+        } else if (notationType === "vers_terre" && latestNote.nbVDT !== undefined) {
+          historyRecord.nbVDT = latestNote.nbVDT;
+        } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && latestNote.fait !== undefined) {
+          historyRecord.fait = latestNote.fait;
+        }
 
-      await storage.saveHistory(historyRecord);
+        await storage.saveHistory(historyRecord);
+      } else {
+        // Pour le type "maladie", on utilise le calcul des résultats
+        const results = calculateResults();
+        if (!results) return;
+
+        const historyRecord: HistoryRecord = {
+          id: Date.now(),
+          reseauName: selectedReseau.name,
+          reseauId: selectedReseau.id,
+          parcelleName: selectedParcelle.name,
+          parcelleId: selectedParcelle.id,
+          placetteId: selectedPlacette,
+          notes,
+          count: notes.length,
+          frequency: results.frequency,
+          intensity: results.intensity,
+          type: notationType,
+          partie: partie,
+          date: new Date().toISOString(),
+          userId: currentUser.id
+        };
+
+        await storage.saveHistory(historyRecord);
+      }
+
       setShowContinueDialog(true);
     } catch (error) {
       console.error("Erreur lors de l'enregistrement de la notation:", error);
@@ -196,6 +283,11 @@ export default function Home() {
     if (shouldContinue) {
       setNotes([]);
       setShowNotes(false);
+      // Réinitialiser les champs des types spécifiques
+      setHauteurIR("");
+      setHauteurCavaillon("");
+      setNbVDT("");
+      setFait(false);
     } else {
       storage.setSelectedReseau(null);
       storage.setSelectedParcelle(null);
@@ -203,23 +295,26 @@ export default function Home() {
     }
   };
 
+  const isEcumesReseau = selectedReseau?.name === "Ecumes";
   const results = calculateResults();
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Notation des maladies</CardTitle>
+    <div className="container mx-auto p-2 space-y-4">
+      <Card className="shadow-md">
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-lg">Notation des maladies</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label>Réseau</label>
+        <CardContent className="space-y-3 px-4 py-2">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Réseau</label>
             <Select value={selectedReseau?.id.toString()} onValueChange={(value) => {
               const reseau = reseaux.find(r => r.id === Number(value));
               setSelectedReseau(reseau || null);
               storage.setSelectedReseau(reseau || null);
               setSelectedParcelle(null);
               setSelectedPlacette(null);
+              // Réinitialiser le type de notation à "maladie" par défaut
+              setNotationType("maladie");
             }}>
               <SelectTrigger>
                 <SelectValue placeholder="Choisir un réseau" />
@@ -235,8 +330,8 @@ export default function Home() {
           </div>
 
           {selectedReseau && (
-            <div className="space-y-2">
-              <label>Parcelle</label>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Parcelle</label>
               <Select value={selectedParcelle?.id.toString()} onValueChange={(value) => {
                 const parcelle = parcelles.find(p => p.id === Number(value));
                 setSelectedParcelle(parcelle || null);
@@ -260,8 +355,8 @@ export default function Home() {
           )}
 
           {selectedParcelle && (
-            <div className="space-y-2">
-              <label>Placette</label>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Placette</label>
               <Select value={selectedPlacette?.toString()} onValueChange={(value) => setSelectedPlacette(Number(value))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une placette" />
@@ -278,9 +373,13 @@ export default function Home() {
           )}
 
           {selectedPlacette !== null && (
-            <div className="space-y-2">
-              <label>Type de notation</label>
-              <Select value={notationType} onValueChange={(value: NotationType) => setNotationType(value)}>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Type de notation</label>
+              <Select value={notationType} onValueChange={(value: NotationType) => {
+                setNotationType(value as NotationType);
+                // Réinitialiser les notes lors du changement de type
+                setNotes([]);
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Type de notation" />
                 </SelectTrigger>
@@ -288,14 +387,23 @@ export default function Home() {
                   <SelectItem value="maladie">Maladie</SelectItem>
                   <SelectItem value="pheno">Phéno</SelectItem>
                   <SelectItem value="ravageur">Ravageur</SelectItem>
+                  {isEcumesReseau && (
+                    <>
+                      <SelectItem value="recouvrement">Recouvrement</SelectItem>
+                      <SelectItem value="analyse_sols">Analyse de sols</SelectItem>
+                      <SelectItem value="vers_terre">Vers de terre</SelectItem>
+                      <SelectItem value="pollinisateur">Pollinisateur</SelectItem>
+                      <SelectItem value="pot_barber">Pot Barber</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
           )}
 
           {notationType === "maladie" && (
-            <div className="space-y-2">
-              <label>Partie de la plante</label>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Partie de la plante</label>
               <Select value={partie} onValueChange={(value: PartiePlante) => setPartie(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Partie de la plante" />
@@ -309,9 +417,9 @@ export default function Home() {
           )}
 
           {notationType === "maladie" && partie && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label>Mildiou</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Mildiou</label>
                 <Input
                   ref={mildouInputRef}
                   type="number"
@@ -319,24 +427,24 @@ export default function Home() {
                   onChange={e => setCurrentNote({ ...currentNote, mildiou: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <label>Oidium</label>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Oidium</label>
                 <Input
                   type="number"
                   value={currentNote.oidium}
                   onChange={e => setCurrentNote({ ...currentNote, oidium: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <label>BR</label>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">BR</label>
                 <Input
                   type="number"
                   value={currentNote.BR}
                   onChange={e => setCurrentNote({ ...currentNote, BR: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <label>Botrytis</label>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Botrytis</label>
                 <Input
                   type="number"
                   value={currentNote.botrytis}
@@ -346,19 +454,92 @@ export default function Home() {
             </div>
           )}
 
+          {notationType === "recouvrement" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Hauteur IR</label>
+                <Input
+                  type="number"
+                  value={hauteurIR}
+                  onChange={e => setHauteurIR(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Hauteur Cavaillon</label>
+                <Input
+                  type="number"
+                  value={hauteurCavaillon}
+                  onChange={e => setHauteurCavaillon(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {notationType === "vers_terre" && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Nombre de vers de terre</label>
+              <Input
+                type="number"
+                value={nbVDT}
+                onChange={e => setNbVDT(e.target.value)}
+              />
+            </div>
+          )}
+
+          {["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && (
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox 
+                id="fait" 
+                checked={fait} 
+                onCheckedChange={(checked) => setFait(checked === true)}
+              />
+              <label htmlFor="fait" className="text-sm font-medium cursor-pointer">
+                Réalisé
+              </label>
+            </div>
+          )}
+
           {(notationType === "pheno" || notationType === "ravageur") && (
-            <div className="p-4 bg-muted rounded-md text-center">
+            <div className="p-3 bg-muted rounded-md text-center text-sm">
               Les champs pour {notationType === "pheno" ? "phénologie" : "ravageurs"} seront ajoutés dans une future version.
             </div>
           )}
 
           {notationType && (notationType !== "maladie" || partie) && (
-            <div className="flex gap-4">
-              <Button onClick={handleSubmit} className="flex-1">
+            <div className="flex gap-2 pt-1">
+              <Button 
+                variant="default" 
+                className="flex-1" 
+                onClick={handleSubmit}
+                disabled={
+                  (notationType === "maladie" && 
+                    !currentNote.mildiou && 
+                    !currentNote.oidium && 
+                    !currentNote.BR && 
+                    !currentNote.botrytis) ||
+                  (notationType === "recouvrement" && 
+                    !hauteurIR && 
+                    !hauteurCavaillon) ||
+                  (notationType === "vers_terre" && 
+                    !nbVDT)
+                }
+              >
                 Ajouter
               </Button>
-              <Button onClick={handleFinish} className="flex-1" variant="secondary">
+              <Button 
+                variant="secondary" 
+                className="flex-1" 
+                onClick={handleFinish}
+                disabled={notes.length === 0 && !fait}
+              >
                 Terminer
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-grow-0"
+                onClick={handleCancel}
+              >
+                <XCircle className="h-4 w-4" />
               </Button>
             </div>
           )}
@@ -366,7 +547,7 @@ export default function Home() {
       </Card>
 
       {notes.length > 0 && (
-        <div className="flex items-center justify-center py-2">
+        <div className="flex items-center justify-center py-1">
           <Badge variant="outline" className="text-sm">
             {notes.length} note{notes.length > 1 ? 's' : ''} en cours
           </Badge>
@@ -374,15 +555,15 @@ export default function Home() {
       )}
 
       {results && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
+        <Card className="shadow-md">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="flex justify-between items-center text-base">
               <span>Résultats</span>
               <Badge>{notes.length} note{notes.length > 1 ? 's' : ''}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <ScrollArea className="h-[200px]">
+          <CardContent className="space-y-3 px-4 py-2">
+            <ScrollArea className="h-[180px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -406,13 +587,13 @@ export default function Home() {
             <Button 
               variant="outline" 
               onClick={() => setShowNotes(!showNotes)}
-              className="w-full"
+              className="w-full py-1 h-8"
             >
               {showNotes ? "Masquer les notes" : "Afficher les notes"}
             </Button>
             
             {showNotes && notes.length > 0 && (
-              <ScrollArea className="h-[200px] border rounded-md">
+              <ScrollArea className="h-[180px] border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -465,6 +646,25 @@ export default function Home() {
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => handleContinue(true)}>
               Oui, poursuivre
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Annuler la notation ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir annuler cette notation ? Toutes les données saisies seront perdues.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowCancelDialog(false)}>
+              Non, continuer
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancel}>
+              Oui, annuler
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
