@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Switch, Route, Router, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -44,23 +45,35 @@ function Navigation() {
   const [location, setLocation] = useLocation();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t bg-background shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 border-t bg-gradient-to-r from-purple-700 to-indigo-600 shadow-lg">
       <div className="container mx-auto px-4 py-1">
         <Tabs value={location} onValueChange={setLocation} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 h-16">
-            <TabsTrigger value="/" className="flex flex-col items-center justify-center space-y-1 py-2">
+          <TabsList className="w-full grid grid-cols-4 h-16 bg-transparent">
+            <TabsTrigger 
+              value="/" 
+              className="flex flex-col items-center justify-center space-y-1 py-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white rounded-lg transition-all"
+            >
               <BookOpen size={20} />
               <span className="text-xs">Notation</span>
             </TabsTrigger>
-            <TabsTrigger value="/reseaux" className="flex flex-col items-center justify-center space-y-1 py-2">
+            <TabsTrigger 
+              value="/reseaux" 
+              className="flex flex-col items-center justify-center space-y-1 py-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white rounded-lg transition-all"
+            >
               <Network size={20} />
               <span className="text-xs">Réseaux</span>
             </TabsTrigger>
-            <TabsTrigger value="/parcelles" className="flex flex-col items-center justify-center space-y-1 py-2">
+            <TabsTrigger 
+              value="/parcelles" 
+              className="flex flex-col items-center justify-center space-y-1 py-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white rounded-lg transition-all"
+            >
               <Map size={20} />
               <span className="text-xs">Parcelles</span>
             </TabsTrigger>
-            <TabsTrigger value="/history" className="flex flex-col items-center justify-center space-y-1 py-2">
+            <TabsTrigger 
+              value="/history" 
+              className="flex flex-col items-center justify-center space-y-1 py-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white rounded-lg transition-all"
+            >
               <HistoryIcon size={20} />
               <span className="text-xs">Historique</span>
             </TabsTrigger>
@@ -148,7 +161,7 @@ function RouterContent() {
   }, [setLocation]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
       <Switch>
         <Route path="/auth/login">
           {() => <Login />}
@@ -174,7 +187,7 @@ function RouterContent() {
             return (
               <>
                 {!isAuthRoute && (
-                  <header className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 shadow-md">
+                  <header className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-4 shadow-md">
                     <div className="container mx-auto px-4 flex justify-between items-center">
                       <h1 className="text-xl font-bold">Notations Viticoles</h1>
                       <UserMenu />
