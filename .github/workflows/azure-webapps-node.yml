@@ -23,41 +23,31 @@ jobs:
     - name: Build
       run: npm run build
         
-    - name: Prepare for deployment
+    - name: Create web.config
       run: |
-        # Make sure destination directory exists
         mkdir -p dist
-        # Check if web.config exists
-        if [ -f "web.config" ]; then
-          echo "Found web.config, copying to dist folder"
-          cp web.config dist/
-        else
-          echo "Creating web.config file"
-          cat > dist/web.config << EOF
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <system.webServer>
-    <rewrite>
-      <rules>
-        <rule name="React Routes" stopProcessing="true">
-          <match url=".*" />
-          <conditions logicalGrouping="MatchAll">
-            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
-            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
-          </conditions>
-          <action type="Rewrite" url="/" />
-        </rule>
-      </rules>
-    </rewrite>
-    <staticContent>
-      <mimeMap fileExtension=".json" mimeType="application/json" />
-      <mimeMap fileExtension=".woff" mimeType="application/font-woff" />
-      <mimeMap fileExtension=".woff2" mimeType="application/font-woff" />
-    </staticContent>
-  </system.webServer>
-</configuration>
-EOF
-        fi
+        echo '<?xml version="1.0" encoding="utf-8"?>' > dist/web.config
+        echo '<configuration>' >> dist/web.config
+        echo '  <system.webServer>' >> dist/web.config
+        echo '    <rewrite>' >> dist/web.config
+        echo '      <rules>' >> dist/web.config
+        echo '        <rule name="React Routes" stopProcessing="true">' >> dist/web.config
+        echo '          <match url=".*" />' >> dist/web.config
+        echo '          <conditions logicalGrouping="MatchAll">' >> dist/web.config
+        echo '            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />' >> dist/web.config
+        echo '            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />' >> dist/web.config
+        echo '          </conditions>' >> dist/web.config
+        echo '          <action type="Rewrite" url="/" />' >> dist/web.config
+        echo '        </rule>' >> dist/web.config
+        echo '      </rules>' >> dist/web.config
+        echo '    </rewrite>' >> dist/web.config
+        echo '    <staticContent>' >> dist/web.config
+        echo '      <mimeMap fileExtension=".json" mimeType="application/json" />' >> dist/web.config
+        echo '      <mimeMap fileExtension=".woff" mimeType="application/font-woff" />' >> dist/web.config
+        echo '      <mimeMap fileExtension=".woff2" mimeType="application/font-woff" />' >> dist/web.config
+        echo '    </staticContent>' >> dist/web.config
+        echo '  </system.webServer>' >> dist/web.config
+        echo '</configuration>' >> dist/web.config
         
     - name: Verify files for deployment
       run: |
@@ -68,7 +58,6 @@ EOF
         echo "Checking if web.config exists:"
         if [ -f "dist/web.config" ]; then
           echo "web.config exists in dist folder"
-          echo "Contents of web.config:"
           cat dist/web.config
         else
           echo "ERROR: web.config not found in dist folder"
