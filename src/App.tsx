@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserMenu from "@/components/UserMenu";
 import { storage } from "@/lib/storage";
 import { User } from "@/shared/schema";
+import { BookOpen, Network, Map, History as HistoryIcon } from "lucide-react";
 
 // Configuration for wouter to work with GitHub Pages
 const useHashLocation = () => {
@@ -44,17 +45,28 @@ function Navigation() {
   const [location, setLocation] = useLocation();
 
   return (
-    <div className="w-full border-b">
-      <div className="container mx-auto px-4 py-2 flex justify-between items-center">
-        <Tabs value={location} onValueChange={setLocation} className="flex-1">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="/reseaux">Réseaux</TabsTrigger>
-            <TabsTrigger value="/parcelles">Parcelles</TabsTrigger>
-            <TabsTrigger value="/">Notation</TabsTrigger>
-            <TabsTrigger value="/history">Historique</TabsTrigger>
+    <div className="fixed bottom-0 left-0 right-0 border-t bg-background shadow-lg">
+      <div className="container mx-auto px-4 py-1">
+        <Tabs value={location} onValueChange={setLocation} className="w-full">
+          <TabsList className="w-full grid grid-cols-4 h-16">
+            <TabsTrigger value="/" className="flex flex-col items-center justify-center space-y-1 py-2">
+              <BookOpen size={20} />
+              <span className="text-xs">Notation</span>
+            </TabsTrigger>
+            <TabsTrigger value="/reseaux" className="flex flex-col items-center justify-center space-y-1 py-2">
+              <Network size={20} />
+              <span className="text-xs">Réseaux</span>
+            </TabsTrigger>
+            <TabsTrigger value="/parcelles" className="flex flex-col items-center justify-center space-y-1 py-2">
+              <Map size={20} />
+              <span className="text-xs">Parcelles</span>
+            </TabsTrigger>
+            <TabsTrigger value="/history" className="flex flex-col items-center justify-center space-y-1 py-2">
+              <HistoryIcon size={20} />
+              <span className="text-xs">Historique</span>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
-        <UserMenu />
       </div>
     </div>
   );
@@ -157,14 +169,20 @@ function RouterContent() {
         <Route>
           {(params: { pathname?: string } | undefined) => {
             // Only render Navigation for non-auth routes
-            // Fix: Add proper type checking for params and pathname property
             const pathname = params ? params.pathname || '' : '';
             const isAuthRoute = pathname.startsWith('/auth');
             
             return (
               <>
-                {!isAuthRoute && <Navigation />}
-                <main className="container mx-auto px-4 py-6">
+                {!isAuthRoute && (
+                  <header className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 shadow-md">
+                    <div className="container mx-auto px-4 flex justify-between items-center">
+                      <h1 className="text-xl font-bold">Notations Viticoles</h1>
+                      <UserMenu />
+                    </div>
+                  </header>
+                )}
+                <main className="container mx-auto px-4 py-6 pb-24">
                   <Switch>
                     <Route path="/">
                       {() => <ProtectedRoute component={Home} />}
@@ -181,6 +199,7 @@ function RouterContent() {
                     {!isAuthRoute && <Route component={NotFound} />}
                   </Switch>
                 </main>
+                {!isAuthRoute && <Navigation />}
               </>
             );
           }}
