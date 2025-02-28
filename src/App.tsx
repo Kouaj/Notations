@@ -13,6 +13,26 @@ import History from "@/pages/history";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
 
+// Configuration for wouter to work with GitHub Pages
+const useHashLocation = () => {
+  const [loc, setLoc] = React.useState(window.location.hash.slice(1) || "/");
+
+  React.useEffect(() => {
+    const handler = () => {
+      setLoc(window.location.hash.slice(1) || "/");
+    };
+
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+
+  const navigate = (to: string) => {
+    window.location.hash = to;
+  };
+
+  return [loc, navigate];
+};
+
 function Navigation() {
   const [location, setLocation] = useLocation();
 
