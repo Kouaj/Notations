@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Reseau, reseauSchema } from "@/shared/schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { storage } from "@/lib/storage";
 
 export default function Reseaux() {
@@ -21,7 +22,18 @@ export default function Reseaux() {
 
   const loadReseaux = async () => {
     try {
-      const loadedReseaux = await storage.getReseaux();
+      const currentUser = await storage.getCurrentUser();
+      
+      if (!currentUser) {
+        toast({
+          title: "Erreur",
+          description: "Vous devez être connecté pour voir vos réseaux",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const loadedReseaux = await storage.getReseauxByUser(currentUser.id);
       setReseaux(loadedReseaux);
     } catch (error) {
       console.error("Erreur lors du chargement des réseaux:", error);

@@ -1,51 +1,29 @@
 
 import React from "react";
-import { Switch, Route, useLocation } from "wouter";
-import Navigation from "@/components/Navigation";
-import UserMenu from "@/components/UserMenu";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import Home from "@/pages/home";
-import Parcelles from "@/pages/parcelles";
-import Reseaux from "@/pages/reseaux";
-import History from "@/pages/history";
-import NotFound from "@/pages/not-found";
+import { UserMenu } from "./UserMenu";
+import { Navigation } from "./Navigation";
 
-export default function AppLayout() {
-  const [location] = useLocation();
-  
-  // Check if current route is an auth route
-  const isAuthRoute = location.startsWith('/auth');
-  
+export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
-      {!isAuthRoute && (
-        <header className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-2 shadow-md">
-          <div className="container mx-auto px-3 flex justify-between items-center">
-            <h1 className="text-lg font-bold">Notations Viticoles</h1>
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <div className="mr-4 hidden md:flex">
+            <a className="mr-6 flex items-center space-x-2" href="/">
+              <span className="hidden font-bold sm:inline-block">
+                Eco-Viticulture
+              </span>
+            </a>
+            <Navigation />
+          </div>
+          <div className="flex flex-1 items-center space-x-2 justify-end">
             <UserMenu />
           </div>
-        </header>
-      )}
-      
-      <main className="container mx-auto px-2 py-1 pb-16">
-        <Switch>
-          <Route path="/">
-            {() => <ProtectedRoute component={Home} />}
-          </Route>
-          <Route path="/parcelles">
-            {() => <ProtectedRoute component={Parcelles} />}
-          </Route>
-          <Route path="/reseaux">
-            {() => <ProtectedRoute component={Reseaux} />}
-          </Route>
-          <Route path="/history">
-            {() => <ProtectedRoute component={History} />}
-          </Route>
-          {!isAuthRoute && <Route component={NotFound} />}
-        </Switch>
+        </div>
+      </header>
+      <main className="flex-1">
+        {children}
       </main>
-      
-      {!isAuthRoute && <Navigation />}
     </div>
   );
 }

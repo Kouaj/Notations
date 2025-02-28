@@ -1,240 +1,135 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { User } from "@/shared/schema";
+import { storage, SystemLog } from "@/lib/storage";
+import { ReloadIcon } from "@radix-ui/react-icons";
 
-import React, { useEffect, useState } from 'react';
-import { useLocation } from 'wouter';
-import { storage } from '@/lib/storage';
-import { SystemLog } from '@/lib/storage/historyStorage';
-import { User } from '@/shared/schema';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-
-export default function AdminPage() {
+export default function Admin() {
+  const [location, setLocation] = useLocation();
   const [users, setUsers] = useState<User[]>([]);
-  const [logs, setLogs] = useState<SystemLog[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [, setLocation] = useLocation();
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const [logMessage, setLogMessage] = useState('');
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const user = await storage.getCurrentUser();
-      setCurrentUser(user);
-      const isUserAdmin = await storage.isAdmin(user);
-      setIsAdmin(isUserAdmin);
+      const currentUser = await storage.getCurrentUser();
+      const isAdmin = await storage.isAdmin(currentUser);
       
-      if (!isUserAdmin) {
-        toast({
-          title: "Accès non autorisé",
-          description: "Vous n'avez pas les droits d'administrateur.",
-          variant: "destructive",
-        });
+      if (!isAdmin) {
         setLocation('/');
+        toast({
+          title: "Accès refusé",
+          description: "Vous n'avez pas les droits d'administrateur",
+          variant: "destructive"
+        });
       } else {
-        loadData();
+        setLoading(false);
       }
     };
     
     checkAdmin();
-  }, [setLocation, toast]);
-
-  const loadData = async () => {
-    try {
-      const allUsers = await storage.getUsers();
-      const systemLogs = await storage.getSystemLogs();
-      
-      setUsers(allUsers);
-      setLogs(systemLogs.sort((a, b) => b.timestamp - a.timestamp));
-    } catch (error) {
-      console.error('Error loading admin data:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données d'administration.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+    
+    // Only load data if user is admin (checked above)
+    const loadData = async () => {
       try {
-        await storage.deleteUser(userId);
-        toast({
-          title: "Succès",
-          description: "L'utilisateur a été supprimé avec succès.",
-        });
-        loadData(); // Recharger les données
+        const [users, logs] = await Promise.all([
+          storage.getUsers(),
+          storage.getSystemLogs()
+        ]);
+        
+        setUsers(users);
+        setSystemLogs(logs);
+        setIsLoading(false);
       } catch (error) {
-        console.error('Error deleting user:', error);
+        console.error("Erreur lors du chargement des données admin:", error);
         toast({
           title: "Erreur",
-          description: "Impossible de supprimer l'utilisateur.",
-          variant: "destructive",
+          description: "Impossible de charger les données d'administration",
+          variant: "destructive"
         });
       }
-    }
-  };
+    };
+    
+    loadData();
+  }, [setLocation, toast]);
 
-  const addManualLog = async () => {
-    if (!logMessage.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le message de log ne peut pas être vide.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await storage.addSystemLog({
-        id: Date.now(),
-        action: 'MANUAL_ENTRY',
-        details: logMessage,
-        userId: currentUser?.id || 'admin',
-        timestamp: Date.now()
-      });
-      setLogMessage('');
-      toast({
-        title: "Succès",
-        description: "Log ajouté avec succès.",
-      });
-      loadData(); // Recharger les logs
-    } catch (error) {
-      console.error('Error adding log:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'ajouter le log.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (!isAdmin) {
-    return <div className="p-8 text-center">Vérification des privilèges...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> Chargement...
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Administration</h1>
-      
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="users">Utilisateurs</TabsTrigger>
-          <TabsTrigger value="logs">Journaux système</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="users">
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-xl font-semibold mb-4">Liste des utilisateurs</h2>
-            
+    <div className="container mx-auto p-4 space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Liste des utilisateurs</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea>
             <Table>
-              <TableCaption>Liste des utilisateurs enregistrés</TableCaption>
+              <TableCaption>Tous les utilisateurs enregistrés.</TableCaption>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Nom</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Email</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {users.map(user => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.id}</TableCell>
+                    <TableCell>{user.name || "N/A"}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.name || '—'}</TableCell>
-                    <TableCell>
-                      {user.email !== 'mathieu.peraud@gmail.com' ? (
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          Supprimer
-                        </Button>
-                      ) : (
-                        <span className="text-sm text-gray-500 italic">Administrateur</span>
-                      )}
-                    </TableCell>
                   </TableRow>
                 ))}
-                {users.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      Aucun utilisateur trouvé
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="logs">
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-xl font-semibold mb-4">Journaux système</h2>
-            
-            <div className="mb-6 p-4 border rounded">
-              <h3 className="font-medium mb-2">Ajouter un journal manuellement</h3>
-              <Textarea
-                value={logMessage}
-                onChange={(e) => setLogMessage(e.target.value)}
-                placeholder="Entrez un message de journal..."
-                className="mb-2"
-              />
-              <Button onClick={addManualLog}>Ajouter</Button>
-            </div>
-            
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Logs du système</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea>
             <Table>
-              <TableCaption>Journaux système</TableCaption>
+              <TableCaption>Activité récente du système.</TableCaption>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date/Heure</TableHead>
+                  <TableHead className="w-[100px]">ID</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Détails</TableHead>
                   <TableHead>Utilisateur</TableHead>
+                  <TableHead>Timestamp</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => (
+                {systemLogs.map(log => (
                   <TableRow key={log.id}>
-                    <TableCell className="font-medium">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </TableCell>
+                    <TableCell className="font-medium">{log.id}</TableCell>
                     <TableCell>{log.action}</TableCell>
                     <TableCell>{log.details}</TableCell>
                     <TableCell>{log.userId}</TableCell>
+                    <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
-                {logs.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      Aucun journal trouvé
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
-          </div>
-        </TabsContent>
-      </Tabs>
-      
-      <div className="mt-6 text-center">
-        <Button variant="outline" onClick={() => setLocation('/')}>
-          Retour à l'accueil
-        </Button>
-      </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }

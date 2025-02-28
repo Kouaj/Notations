@@ -35,26 +35,21 @@ export default function Home() {
   });
   const [showContinueDialog, setShowContinueDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  // États pour les types spécifiques
   const [hauteurIR, setHauteurIR] = useState<string>("");
   const [hauteurCavaillon, setHauteurCavaillon] = useState<string>("");
   const [nbVDT, setNbVDT] = useState<string>("");
   const [fait, setFait] = useState<boolean>(false);
-  // Nouvel état pour le commentaire
   const [commentaire, setCommentaire] = useState<string>("");
-  // État pour suivre d'où on vient
   const [fromHistory, setFromHistory] = useState<boolean>(false);
-  
+
   const { toast } = useToast();
   const mildouInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Détecter si l'on vient de l'historique
     const checkRoute = () => {
       const fromHistoryPage = location.includes("history");
       setFromHistory(fromHistoryPage);
       
-      // Réinitialiser si on revient de l'historique
       if (fromHistoryPage) {
         resetAllFields();
       }
@@ -62,28 +57,44 @@ export default function Home() {
     
     checkRoute();
     
-    Promise.all([
-      storage.getReseaux(),
-      storage.getParcelles(),
-      storage.getSelectedReseau(),
-      storage.getSelectedParcelle()
-    ]).then(([reseaux, parcelles, selectedReseau, selectedParcelle]) => {
-      setReseaux(reseaux);
-      setParcelles(parcelles);
+    async function loadUserData() {
+      const currentUser = await storage.getCurrentUser();
       
-      if (selectedReseau) {
+      if (!currentUser) {
+        toast({
+          title: "Erreur",
+          description: "Vous devez être connecté pour accéder à cette page",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const [userReseaux, userParcelles, selectedReseau, selectedParcelle] = await Promise.all([
+        storage.getReseauxByUser(currentUser.id),
+        storage.getParcellesByUser(currentUser.id),
+        storage.getSelectedReseau(),
+        storage.getSelectedParcelle()
+      ]);
+      
+      setReseaux(userReseaux);
+      setParcelles(userParcelles);
+      
+      if (selectedReseau && userReseaux.some(r => r.id === selectedReseau.id)) {
         setSelectedReseau(selectedReseau);
         
-        const filteredParcelles = parcelles.filter(p => p.reseauId === selectedReseau.id);
+        const filteredParcelles = userParcelles.filter(p => p.reseauId === selectedReseau.id);
         
-        if (selectedParcelle && selectedParcelle.reseauId === selectedReseau.id) {
+        if (selectedParcelle && selectedParcelle.reseauId === selectedReseau.id && 
+            userParcelles.some(p => p.id === selectedParcelle.id)) {
           setSelectedParcelle(selectedParcelle);
         } else if (filteredParcelles.length > 0) {
           setSelectedParcelle(null);
         }
       }
-    });
-  }, [location]);
+    }
+    
+    loadUserData();
+  }, [location, toast]);
 
   useEffect(() => {
     if (selectedReseau) {
@@ -97,7 +108,6 @@ export default function Home() {
     }
   }, [selectedReseau, parcelles]);
 
-  // Réinitialisation complète des champs
   const resetAllFields = () => {
     setSelectedReseau(null);
     setSelectedParcelle(null);
@@ -124,7 +134,6 @@ export default function Home() {
       return;
     }
 
-    // Vérifier si la placette est requise pour ce type de notation
     if (notationType === "maladie" && selectedPlacette === null) {
       toast({
         title: "Erreur",
@@ -144,7 +153,6 @@ export default function Home() {
       date: new Date().toISOString()
     };
 
-    // Ajouter les champs spécifiques selon le type de notation
     if (notationType === "recouvrement") {
       note.hauteurIR = Number(hauteurIR) || 0;
       note.hauteurCavaillon = Number(hauteurCavaillon) || 0;
@@ -156,7 +164,6 @@ export default function Home() {
 
     setNotes([...notes, note]);
     
-    // Réinitialiser les valeurs des champs
     setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
     
     setTimeout(() => {
@@ -244,7 +251,6 @@ export default function Home() {
       return;
     }
 
-    // Vérifier le type de notation
     if (!notationType) {
       toast({
         title: "Erreur",
@@ -254,7 +260,6 @@ export default function Home() {
       return;
     }
 
-    // Vérifier si la placette est requise pour ce type de notation
     if (notationType === "maladie" && selectedPlacette === null) {
       toast({
         title: "Erreur",
@@ -264,7 +269,6 @@ export default function Home() {
       return;
     }
 
-    // Vérifier les données en fonction du type de notation
     if (notationType === "maladie" && notes.length === 0) {
       toast({
         title: "Erreur",
@@ -274,7 +278,6 @@ export default function Home() {
       return;
     }
 
-    // Pour les types de notation nécessitant un marquage "fait", vérifier si c'est fait
     if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && !fait) {
       toast({
         title: "Erreur",
@@ -284,7 +287,6 @@ export default function Home() {
       return;
     }
 
-    // Pour le type commentaire, vérifier si un commentaire a été saisi
     if (notationType === "commentaire" && !commentaire) {
       toast({
         title: "Erreur",
@@ -305,7 +307,6 @@ export default function Home() {
         return;
       }
 
-      // Créer l'enregistrement d'historique
       const historyRecord: HistoryRecord = {
         id: Date.now(),
         reseauName: selectedReseau.name,
@@ -325,7 +326,6 @@ export default function Home() {
         userId: currentUser.id
       };
 
-      // Ajouter les données spécifiques en fonction du type de notation
       if (notationType === "maladie") {
         const results = calculateResults();
         if (results) {
@@ -365,7 +365,6 @@ export default function Home() {
   const handleContinue = (shouldContinue: boolean) => {
     setShowContinueDialog(false);
     if (shouldContinue) {
-      // Réinitialiser uniquement les notes et les champs spécifiques
       setNotes([]);
       setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
       setHauteurIR("");
@@ -375,7 +374,6 @@ export default function Home() {
       setCommentaire("");
       setShowNotes(false);
     } else {
-      // Réinitialiser tout et redirectionner vers l'historique
       storage.setSelectedReseau(null);
       storage.setSelectedParcelle(null);
       resetAllFields();
@@ -458,11 +456,9 @@ export default function Home() {
                 value={notationType || ""} 
                 onValueChange={(value: NotationType) => {
                   setNotationType(value);
-                  // Réinitialiser les notes lors du changement de type
                   setNotes([]);
                   setFait(false);
                   setCommentaire("");
-                  // Réinitialiser la placette et la partie
                   setSelectedPlacette(null);
                   setPartie(null);
                 }}
