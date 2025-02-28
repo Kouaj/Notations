@@ -5,6 +5,7 @@ import { storage } from "@/lib/storage";
 
 interface ProtectedRouteProps {
   component: React.ComponentType<any>;
+  path?: string; // Make path optional since we're not using it anymore
 }
 
 export default function ProtectedRoute({ component: Component }: ProtectedRouteProps) {

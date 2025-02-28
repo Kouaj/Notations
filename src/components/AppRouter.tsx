@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Router, Route } from "wouter";
 import Home from "@/pages/home";
@@ -6,21 +7,31 @@ import Parcelles from "@/pages/parcelles";
 import History from "@/pages/history";
 import LoginPage from "@/pages/auth/login";
 import RegisterPage from "@/pages/auth/register";
-import NotFound from "@/pages/notFound";
+import NotFound from "@/pages/not-found";
 import ProtectedRoute from "./ProtectedRoute";
 import Admin from "@/pages/admin";
 
 export function AppRouter() {
   return (
     <Router>
-      <ProtectedRoute component={Home} path="/" />
-      <ProtectedRoute component={Reseaux} path="/reseaux" />
-      <ProtectedRoute component={Parcelles} path="/parcelles" />
-      <ProtectedRoute component={History} path="/history" />
-      <ProtectedRoute component={Admin} path="/admin" />
+      <Route path="/">
+        <ProtectedRoute component={Home} />
+      </Route>
+      <Route path="/reseaux">
+        <ProtectedRoute component={Reseaux} />
+      </Route>
+      <Route path="/parcelles">
+        <ProtectedRoute component={Parcelles} />
+      </Route>
+      <Route path="/history">
+        <ProtectedRoute component={History} />
+      </Route>
+      <Route path="/admin">
+        <ProtectedRoute component={Admin} />
+      </Route>
       <Route path="/auth/login" component={LoginPage} />
       <Route path="/auth/register" component={RegisterPage} />
-      <Route component={NotFound} />
+      <Route path="/:rest*" component={NotFound} />
     </Router>
   );
 }
