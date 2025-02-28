@@ -31,4 +31,28 @@ export class HistoryStorage extends BaseStorage {
       store => store.delete(id)
     );
   }
+
+  async getSystemLogs(): Promise<SystemLog[]> {
+    return this.performTransaction(
+      STORES.SYSTEM_LOGS,
+      'readonly',
+      store => store.getAll()
+    );
+  }
+
+  async addSystemLog(log: SystemLog): Promise<void> {
+    await this.performTransaction(
+      STORES.SYSTEM_LOGS,
+      'readwrite',
+      store => store.put(log)
+    );
+  }
+}
+
+export interface SystemLog {
+  id: number;
+  action: string;
+  details: string;
+  userId: string;
+  timestamp: number;
 }

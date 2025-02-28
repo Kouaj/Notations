@@ -1,71 +1,26 @@
+import React from "react";
+import { Router, Route } from "wouter";
+import Home from "@/pages/home";
+import Reseaux from "@/pages/reseaux";
+import Parcelles from "@/pages/parcelles";
+import History from "@/pages/history";
+import LoginPage from "@/pages/auth/login";
+import RegisterPage from "@/pages/auth/register";
+import NotFound from "@/pages/notFound";
+import ProtectedRoute from "./ProtectedRoute";
+import Admin from "@/pages/admin";
 
-import React, { useEffect } from "react";
-import { Router, Switch, Route, useLocation } from "wouter";
-import AppLayout from "@/components/AppLayout";
-import Login from "@/pages/auth/login";
-import Register from "@/pages/auth/register";
-import { storage } from "@/lib/storage";
-
-// Configuration for wouter to work with GitHub Pages
-export const useHashLocation = () => {
-  const [loc, setLoc] = React.useState(window.location.hash.slice(1) || "/");
-
-  React.useEffect(() => {
-    const handler = () => {
-      const hash = window.location.hash.slice(1);
-      setLoc(hash || "/");
-    };
-
-    window.addEventListener("hashchange", handler);
-    handler(); // Initialize with current hash
-    return () => window.removeEventListener("hashchange", handler);
-  }, []);
-
-  const navigate = (to: string) => {
-    window.location.hash = to;
-  };
-
-  return [loc, navigate] as [string, (to: string) => void];
-};
-
-export default function AppRouter() {
-  const [, setLocation] = useLocation();
-  
-  // Check authentication status on initial load
-  useEffect(() => {
-    const checkAuth = async () => {
-      const user = await storage.getCurrentUser();
-      // If no user is logged in, redirect to login page
-      if (!user) {
-        setLocation('/auth/login');
-      }
-    };
-    
-    checkAuth();
-  }, [setLocation]);
-
+export function AppRouter() {
   return (
-    <Router hook={useHashLocation}>
-      <Switch>
-        <Route path="/auth/login">
-          <Login />
-        </Route>
-        <Route path="/auth/register">
-          <Register />
-        </Route>
-        <Route path="/auth">
-          {() => {
-            const [, setLocation] = useLocation();
-            useEffect(() => {
-              setLocation('/auth/login');
-            }, [setLocation]);
-            return null;
-          }}
-        </Route>
-        <Route>
-          <AppLayout />
-        </Route>
-      </Switch>
+    <Router>
+      <ProtectedRoute component={Home} path="/" />
+      <ProtectedRoute component={Reseaux} path="/reseaux" />
+      <ProtectedRoute component={Parcelles} path="/parcelles" />
+      <ProtectedRoute component={History} path="/history" />
+      <ProtectedRoute component={Admin} path="/admin" />
+      <Route path="/auth/login" component={LoginPage} />
+      <Route path="/auth/register" component={RegisterPage} />
+      <Route component={NotFound} />
     </Router>
   );
 }

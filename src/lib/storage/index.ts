@@ -2,7 +2,7 @@
 import { UserStorage } from './userStorage';
 import { ReseauStorage } from './reseauStorage';
 import { ParcelleStorage } from './parcelleStorage';
-import { HistoryStorage } from './historyStorage';
+import { HistoryStorage, SystemLog } from './historyStorage';
 import { IDBStorage } from './interfaces';
 
 // Aggregate class that implements all storage interfaces
@@ -31,6 +31,21 @@ class IndexedDBStorage implements IDBStorage {
 
   async setCurrentUser(user) {
     return this.userStorage.setCurrentUser(user);
+  }
+
+  async deleteUser(id) {
+    await this.userStorage.deleteUser(id);
+    await this.historyStorage.addSystemLog({
+      id: Date.now(),
+      action: 'DELETE_USER',
+      details: `User with ID ${id} was deleted`,
+      userId: 'admin',
+      timestamp: Date.now()
+    });
+  }
+
+  async isAdmin(user) {
+    return this.userStorage.isAdmin(user);
   }
 
   // Réseau methods
@@ -111,6 +126,15 @@ class IndexedDBStorage implements IDBStorage {
   async deleteHistory(id) {
     return this.historyStorage.deleteHistory(id);
   }
+
+  // System Logs methods
+  async getSystemLogs() {
+    return this.historyStorage.getSystemLogs();
+  }
+
+  async addSystemLog(log) {
+    return this.historyStorage.addSystemLog(log);
+  }
 }
 
 // Export a singleton instance of the storage
@@ -118,3 +142,4 @@ export const storage = new IndexedDBStorage();
 
 // Re-export necessary constants
 export { DB_NAME, DB_VERSION, STORES } from './core';
+export type { SystemLog } from './historyStorage';
