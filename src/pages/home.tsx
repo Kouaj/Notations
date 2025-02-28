@@ -78,10 +78,20 @@ export default function Home() {
   }, [selectedReseau, parcelles]);
 
   const handleSubmit = () => {
-    if (!selectedParcelle || selectedPlacette === null) {
+    if (!selectedParcelle) {
       toast({
         title: "Erreur",
-        description: "Merci de choisir une parcelle et une placette",
+        description: "Merci de choisir une parcelle",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Vérifier si la placette est requise pour ce type de notation
+    if (!["pollinisateur", "pot_barber"].includes(notationType) && selectedPlacette === null) {
+      toast({
+        title: "Erreur",
+        description: "Merci de choisir une placette",
         variant: "destructive"
       });
       return;
@@ -191,10 +201,40 @@ export default function Home() {
   };
 
   const handleFinish = async () => {
-    if (!selectedReseau || !selectedParcelle || selectedPlacette === null || notes.length === 0) {
+    if (!selectedReseau || !selectedParcelle) {
       toast({
         title: "Erreur",
-        description: "Merci de compléter tous les champs et d'ajouter au moins une note",
+        description: "Merci de choisir un réseau et une parcelle",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Vérifier si la placette est requise pour ce type de notation
+    if (!["pollinisateur", "pot_barber"].includes(notationType) && selectedPlacette === null) {
+      toast({
+        title: "Erreur",
+        description: "Merci de choisir une placette",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Vérifier si nous avons des données valides
+    if (notationType === "maladie" && notes.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Merci d'ajouter au moins une note pour ce type de notation",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Pour les types de notation nécessitant un marquage "fait", vérifier si c'est fait
+    if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && !fait) {
+      toast({
+        title: "Erreur",
+        description: "Merci de marquer l'opération comme réalisée avant de terminer",
         variant: "destructive"
       });
       return;
@@ -212,60 +252,49 @@ export default function Home() {
       }
 
       // Pour les types de notation autres que "maladie", on crée un enregistrement simplifié
-      if (notationType !== "maladie") {
-        const latestNote = notes[notes.length - 1];
-        const historyRecord: HistoryRecord = {
-          id: Date.now(),
-          reseauName: selectedReseau.name,
-          reseauId: selectedReseau.id,
-          parcelleName: selectedParcelle.name,
-          parcelleId: selectedParcelle.id,
-          placetteId: selectedPlacette,
-          notes: notes,
-          count: notes.length,
-          frequency: {},
-          intensity: {},
-          type: notationType,
-          partie: partie,
-          date: new Date().toISOString(),
-          userId: currentUser.id
-        };
+      const historyRecord: HistoryRecord = {
+        id: Date.now(),
+        reseauName: selectedReseau.name,
+        reseauId: selectedReseau.id,
+        parcelleName: selectedParcelle.name,
+        parcelleId: selectedParcelle.id,
+        placetteId: ["pollinisateur", "pot_barber"].includes(notationType) ? -1 : (selectedPlacette || 0),
+        notes: notationType === "maladie" ? notes : [],
+        count: notes.length,
+        frequency: {},
+        intensity: {},
+        type: notationType,
+        partie: partie,
+        date: new Date().toISOString(),
+        userId: currentUser.id
+      };
 
-        // Ajouter les propriétés spécifiques au type de notation
-        if (notationType === "recouvrement" && latestNote.hauteurIR !== undefined && latestNote.hauteurCavaillon !== undefined) {
-          historyRecord.hauteurIR = latestNote.hauteurIR;
-          historyRecord.hauteurCavaillon = latestNote.hauteurCavaillon;
-        } else if (notationType === "vers_terre" && latestNote.nbVDT !== undefined) {
-          historyRecord.nbVDT = latestNote.nbVDT;
-        } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && latestNote.fait !== undefined) {
-          historyRecord.fait = latestNote.fait;
-        }
-
-        await storage.saveHistory(historyRecord);
-      } else {
-        // Pour le type "maladie", on utilise le calcul des résultats
+      // Pour le type "maladie", calculer les résultats
+      if (notationType === "maladie") {
         const results = calculateResults();
-        if (!results) return;
-
-        const historyRecord: HistoryRecord = {
-          id: Date.now(),
-          reseauName: selectedReseau.name,
-          reseauId: selectedReseau.id,
-          parcelleName: selectedParcelle.name,
-          parcelleId: selectedParcelle.id,
-          placetteId: selectedPlacette,
-          notes,
-          count: notes.length,
-          frequency: results.frequency,
-          intensity: results.intensity,
-          type: notationType,
-          partie: partie,
-          date: new Date().toISOString(),
-          userId: currentUser.id
-        };
-
-        await storage.saveHistory(historyRecord);
+        if (results) {
+          historyRecord.frequency = results.frequency;
+          historyRecord.intensity = results.intensity;
+        }
       }
+
+      // Ajouter les propriétés spécifiques au type de notation
+      if (notationType === "recouvrement" && hauteurIR && hauteurCavaillon) {
+        historyRecord.hauteurIR = Number(hauteurIR);
+        historyRecord.hauteurCavaillon = Number(hauteurCavaillon);
+      } else if (notationType === "vers_terre" && nbVDT) {
+        historyRecord.nbVDT = Number(nbVDT);
+      } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType)) {
+        historyRecord.fait = fait;
+      }
+
+      await storage.saveHistory(historyRecord);
+
+      toast({
+        title: "Enregistré",
+        description: `La notation de type ${notationType} a été enregistrée avec succès`,
+        variant: "success"
+      });
 
       setShowContinueDialog(true);
     } catch (error) {
@@ -297,14 +326,15 @@ export default function Home() {
 
   const isEcumesReseau = selectedReseau?.name === "Ecumes";
   const results = calculateResults();
+  const needsPlacette = !["pollinisateur", "pot_barber"].includes(notationType);
 
   return (
-    <div className="container mx-auto p-2 space-y-4">
+    <div className="container mx-auto p-1 space-y-3">
       <Card className="shadow-md">
-        <CardHeader className="py-3 px-4">
+        <CardHeader className="py-2 px-4">
           <CardTitle className="text-lg">Notation des maladies</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 px-4 py-2">
+        <CardContent className="space-y-2 px-4 py-1">
           <div className="space-y-1">
             <label className="text-sm font-medium">Réseau</label>
             <Select value={selectedReseau?.id.toString()} onValueChange={(value) => {
@@ -331,6 +361,36 @@ export default function Home() {
 
           {selectedReseau && (
             <div className="space-y-1">
+              <label className="text-sm font-medium">Type de notation</label>
+              <Select value={notationType} onValueChange={(value: NotationType) => {
+                setNotationType(value as NotationType);
+                // Réinitialiser les notes lors du changement de type
+                setNotes([]);
+                setFait(false);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type de notation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="maladie">Maladie</SelectItem>
+                  <SelectItem value="pheno">Phéno</SelectItem>
+                  <SelectItem value="ravageur">Ravageur</SelectItem>
+                  {isEcumesReseau && (
+                    <>
+                      <SelectItem value="recouvrement">Recouvrement</SelectItem>
+                      <SelectItem value="analyse_sols">Analyse de sols</SelectItem>
+                      <SelectItem value="vers_terre">Vers de terre</SelectItem>
+                      <SelectItem value="pollinisateur">Pollinisateur</SelectItem>
+                      <SelectItem value="pot_barber">Pot Barber</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {selectedReseau && (
+            <div className="space-y-1">
               <label className="text-sm font-medium">Parcelle</label>
               <Select value={selectedParcelle?.id.toString()} onValueChange={(value) => {
                 const parcelle = parcelles.find(p => p.id === Number(value));
@@ -354,7 +414,7 @@ export default function Home() {
             </div>
           )}
 
-          {selectedParcelle && (
+          {selectedParcelle && needsPlacette && (
             <div className="space-y-1">
               <label className="text-sm font-medium">Placette</label>
               <Select value={selectedPlacette?.toString()} onValueChange={(value) => setSelectedPlacette(Number(value))}>
@@ -367,35 +427,6 @@ export default function Home() {
                       {placette.name}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {selectedPlacette !== null && (
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Type de notation</label>
-              <Select value={notationType} onValueChange={(value: NotationType) => {
-                setNotationType(value as NotationType);
-                // Réinitialiser les notes lors du changement de type
-                setNotes([]);
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Type de notation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="maladie">Maladie</SelectItem>
-                  <SelectItem value="pheno">Phéno</SelectItem>
-                  <SelectItem value="ravageur">Ravageur</SelectItem>
-                  {isEcumesReseau && (
-                    <>
-                      <SelectItem value="recouvrement">Recouvrement</SelectItem>
-                      <SelectItem value="analyse_sols">Analyse de sols</SelectItem>
-                      <SelectItem value="vers_terre">Vers de terre</SelectItem>
-                      <SelectItem value="pollinisateur">Pollinisateur</SelectItem>
-                      <SelectItem value="pot_barber">Pot Barber</SelectItem>
-                    </>
-                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -417,7 +448,7 @@ export default function Home() {
           )}
 
           {notationType === "maladie" && partie && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Mildiou</label>
                 <Input
@@ -455,7 +486,7 @@ export default function Home() {
           )}
 
           {notationType === "recouvrement" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Hauteur IR</label>
                 <Input
@@ -487,7 +518,7 @@ export default function Home() {
           )}
 
           {["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && (
-            <div className="flex items-center space-x-2 py-2">
+            <div className="flex items-center space-x-2 py-1">
               <Checkbox 
                 id="fait" 
                 checked={fait} 
@@ -500,37 +531,46 @@ export default function Home() {
           )}
 
           {(notationType === "pheno" || notationType === "ravageur") && (
-            <div className="p-3 bg-muted rounded-md text-center text-sm">
+            <div className="p-2 bg-muted rounded-md text-center text-sm">
               Les champs pour {notationType === "pheno" ? "phénologie" : "ravageurs"} seront ajoutés dans une future version.
             </div>
           )}
 
-          {notationType && (notationType !== "maladie" || partie) && (
+          {notationType && (
             <div className="flex gap-2 pt-1">
-              <Button 
-                variant="default" 
-                className="flex-1" 
-                onClick={handleSubmit}
-                disabled={
-                  (notationType === "maladie" && 
-                    !currentNote.mildiou && 
-                    !currentNote.oidium && 
-                    !currentNote.BR && 
-                    !currentNote.botrytis) ||
-                  (notationType === "recouvrement" && 
-                    !hauteurIR && 
-                    !hauteurCavaillon) ||
-                  (notationType === "vers_terre" && 
-                    !nbVDT)
-                }
-              >
-                Ajouter
-              </Button>
+              {(notationType === "maladie" || notationType === "recouvrement" || notationType === "vers_terre") && (
+                <Button 
+                  variant="default" 
+                  className="flex-1" 
+                  onClick={handleSubmit}
+                  disabled={
+                    (notationType === "maladie" && 
+                      !currentNote.mildiou && 
+                      !currentNote.oidium && 
+                      !currentNote.BR && 
+                      !currentNote.botrytis) ||
+                    (notationType === "recouvrement" && 
+                      !hauteurIR && 
+                      !hauteurCavaillon) ||
+                    (notationType === "vers_terre" && 
+                      !nbVDT) ||
+                    !selectedParcelle ||
+                    (needsPlacette && selectedPlacette === null)
+                  }
+                >
+                  Ajouter
+                </Button>
+              )}
               <Button 
                 variant="secondary" 
                 className="flex-1" 
                 onClick={handleFinish}
-                disabled={notes.length === 0 && !fait}
+                disabled={
+                  !selectedParcelle ||
+                  (needsPlacette && selectedPlacette === null) ||
+                  (notationType === "maladie" && notes.length === 0) ||
+                  (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && !fait)
+                }
               >
                 Terminer
               </Button>
@@ -556,14 +596,14 @@ export default function Home() {
 
       {results && (
         <Card className="shadow-md">
-          <CardHeader className="py-3 px-4">
+          <CardHeader className="py-2 px-4">
             <CardTitle className="flex justify-between items-center text-base">
               <span>Résultats</span>
               <Badge>{notes.length} note{notes.length > 1 ? 's' : ''}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 px-4 py-2">
-            <ScrollArea className="h-[180px]">
+          <CardContent className="space-y-2 px-4 py-1">
+            <ScrollArea className="h-[160px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -593,7 +633,7 @@ export default function Home() {
             </Button>
             
             {showNotes && notes.length > 0 && (
-              <ScrollArea className="h-[180px] border rounded-md">
+              <ScrollArea className="h-[160px] border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
