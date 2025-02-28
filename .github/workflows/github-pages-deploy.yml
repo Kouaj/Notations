@@ -3,18 +3,17 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
-# Configuration des permissions
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
-# Définir des variables d'environnement pour le workflow
-env:
-  NODE_VERSION: '20.x'
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -22,54 +21,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
-      - name: Set up Node.js
+      
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          
+          node-version: '20'
+          cache: 'npm'
+      
       - name: Install dependencies
-        run: |
-          npm install --force --legacy-peer-deps
-        
-      - name: Debug npm scripts
-        run: cat package.json | grep scripts -A 10
-        
+        run: npm install --legacy-peer-deps
+      
       - name: Build
-        run: |
-          echo "Starting build process..."
-          npm run build || (echo "Build failed" && exit 1)
+        run: npm run build
         env:
           CI: false
-          
-      - name: Check dist directory
+      
+      - name: Directory listing
         run: |
-          echo "Checking dist directory..."
-          if [ ! -d "dist" ]; then
-            echo "Dist directory does not exist!"
-            exit 1
-          fi
-          echo "Dist directory exists. Contents:"
-          ls -la dist/
-          
-      - name: Check index.html in dist
-        run: |
-          if [ ! -f "dist/index.html" ]; then
-            echo "index.html does not exist in dist!"
-            exit 1
-          fi
-          echo "index.html exists in dist."
-          
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-        
+          echo "Current directory:"
+          ls -la
+          echo "Dist directory:"
+          ls -la dist || echo "Dist directory missing!"
+      
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          path: './dist'
+          name: github-pages
+          path: dist
+          if-no-files-found: error
 
-  # Déploiement sur GitHub Pages
   deploy:
     environment:
       name: github-pages
