@@ -140,9 +140,9 @@ function RouterContent() {
           }}
         </Route>
         <Route>
-          {(params) => {
+          {(params: { pathname?: string } | undefined) => {
             // Only render Navigation for non-auth routes
-            // Fix: Add proper type checking for params
+            // Fix: Add proper type checking for params and pathname property
             const pathname = params ? params.pathname || '' : '';
             const isAuthRoute = pathname.startsWith('/auth');
             
