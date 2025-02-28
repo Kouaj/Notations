@@ -29,8 +29,7 @@ jobs:
       run: |
         echo "Creating web.config file"
         mkdir -p dist
-        cat > dist/web.config << 'EOL'
-<?xml version="1.0" encoding="utf-8"?>
+        echo '<?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <system.webServer>
     <rewrite>
@@ -51,8 +50,7 @@ jobs:
       <mimeMap fileExtension=".woff2" mimeType="application/font-woff" />
     </staticContent>
   </system.webServer>
-</configuration>
-EOL
+</configuration>' > dist/web.config
         
     - name: Check build output
       run: |
