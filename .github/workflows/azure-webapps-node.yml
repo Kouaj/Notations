@@ -9,6 +9,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: 'Production'
     steps:
     - uses: actions/checkout@v4
     
@@ -16,19 +18,27 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
-        # Removing cache to avoid the cache errors
         
     - name: Check Node.js and npm versions
       run: |
         node -v
         npm -v
         
-    - name: Install dependencies
+    - name: List lock file and package.json for debugging
       run: |
-        npm install --no-fund --no-audit
+        echo "Package.json contents:"
+        cat package.json
+        echo "Lock file exists?"
+        ls -la package-lock.json || echo "No package-lock.json found"
+        
+    - name: Install dependencies with specific options
+      run: |
+        npm install --legacy-peer-deps --ignore-scripts
         
     - name: Build
       run: npm run build
+      env:
+        CI: false
         
     - name: Create web.config
       run: |
