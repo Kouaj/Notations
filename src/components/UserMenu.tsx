@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from './ui/button';
 import { useToast } from './ui/use-toast';
 import { useLocation } from 'wouter';
@@ -14,26 +14,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserIcon, LogOutIcon, ChevronDownIcon } from 'lucide-react';
 
-export default function UserMenu() {
-  const [user, setUser] = useState<User | null>(null);
+interface UserMenuProps {
+  user: User;
+}
+
+export default function UserMenu({ user }: UserMenuProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const currentUser = await storage.getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error("Error fetching user:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -56,23 +43,6 @@ export default function UserMenu() {
       });
     }
   };
-
-  if (loading) {
-    return <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse"></div>;
-  }
-
-  if (!user) {
-    return (
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={() => setLocation('/auth/login')}>
-          Connexion
-        </Button>
-        <Button onClick={() => setLocation('/auth/register')}>
-          Inscription
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <DropdownMenu>

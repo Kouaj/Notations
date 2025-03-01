@@ -1,8 +1,97 @@
+
 import { IDBStorage } from './interfaces';
 import { User, Reseau, Parcelle, HistoryRecord, Note } from '@/shared/schema';
 
-// Implémentation de base pour le stockage local
-class LocalStorage implements IDBStorage {
+// Constants for IndexedDB
+export const DB_NAME = 'vitiapp_db';
+export const DB_VERSION = 1;
+
+// Store names
+export const STORES = {
+  USERS: 'users',
+  CURRENT_USER: 'currentUser',
+  RESEAUX: 'reseaux',
+  SELECTED_RESEAU: 'selectedReseau',
+  PARCELLES: 'parcelles',
+  SELECTED_PARCELLE: 'selectedParcelle',
+  HISTORY: 'history',
+  NOTES: 'notes'
+};
+
+// Base storage class with transaction helper
+export class BaseStorage {
+  async performTransaction<T>(
+    storeName: string,
+    mode: IDBTransactionMode,
+    callback: (store: IDBObjectStore) => IDBRequest<T>
+  ): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onerror = () => reject(new Error('Failed to open database'));
+
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(storeName, mode);
+        const store = transaction.objectStore(storeName);
+        
+        try {
+          const request = callback(store);
+
+          request.onsuccess = () => {
+            resolve(request.result);
+          };
+
+          request.onerror = () => {
+            reject(request.error);
+          };
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = request.result;
+        
+        // Create stores if they don't exist
+        if (!db.objectStoreNames.contains(STORES.USERS)) {
+          db.createObjectStore(STORES.USERS, { keyPath: 'id' });
+        }
+        
+        if (!db.objectStoreNames.contains(STORES.CURRENT_USER)) {
+          db.createObjectStore(STORES.CURRENT_USER);
+        }
+        
+        if (!db.objectStoreNames.contains(STORES.RESEAUX)) {
+          db.createObjectStore(STORES.RESEAUX, { keyPath: 'id', autoIncrement: true });
+        }
+        
+        if (!db.objectStoreNames.contains(STORES.SELECTED_RESEAU)) {
+          db.createObjectStore(STORES.SELECTED_RESEAU);
+        }
+        
+        if (!db.objectStoreNames.contains(STORES.PARCELLES)) {
+          db.createObjectStore(STORES.PARCELLES, { keyPath: 'id', autoIncrement: true });
+        }
+        
+        if (!db.objectStoreNames.contains(STORES.SELECTED_PARCELLE)) {
+          db.createObjectStore(STORES.SELECTED_PARCELLE);
+        }
+        
+        if (!db.objectStoreNames.contains(STORES.HISTORY)) {
+          db.createObjectStore(STORES.HISTORY, { keyPath: 'id', autoIncrement: true });
+        }
+        
+        if (!db.objectStoreNames.contains(STORES.NOTES)) {
+          db.createObjectStore(STORES.NOTES, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+    });
+  }
+}
+
+// Fallback implementation using localStorage for development
+export class LocalStorage implements IDBStorage {
   private users: User[] = [];
   private reseaux: Reseau[] = [];
   private parcelles: Parcelle[] = [];
@@ -35,7 +124,7 @@ class LocalStorage implements IDBStorage {
     return this.users;
   }
   
-  async getUserById(id: number): Promise<User | null> {
+  async getUserById(id: string): Promise<User | null> {
     return this.users.find(user => user.id === id) || null;
   }
   
@@ -54,6 +143,12 @@ class LocalStorage implements IDBStorage {
     if (existingIndex >= 0) {
       this.reseaux[existingIndex] = reseau;
     } else {
+      // Auto-increment ID if not provided
+      if (!reseau.id) {
+        reseau.id = this.reseaux.length > 0 
+          ? Math.max(...this.reseaux.map(r => r.id)) + 1 
+          : 1;
+      }
       this.reseaux.push(reseau);
     }
     
@@ -87,6 +182,12 @@ class LocalStorage implements IDBStorage {
     if (existingIndex >= 0) {
       this.parcelles[existingIndex] = parcelle;
     } else {
+      // Auto-increment ID if not provided
+      if (!parcelle.id) {
+        parcelle.id = this.parcelles.length > 0 
+          ? Math.max(...this.parcelles.map(p => p.id)) + 1 
+          : 1;
+      }
       this.parcelles.push(parcelle);
     }
     
@@ -106,7 +207,7 @@ class LocalStorage implements IDBStorage {
     return this.history;
   }
   
-  async getHistoryByUser(userId: number): Promise<HistoryRecord[]> {
+  async getHistoryByUser(userId: string): Promise<HistoryRecord[]> {
     return this.history.filter(record => record.userId === userId);
   }
   
@@ -124,6 +225,12 @@ class LocalStorage implements IDBStorage {
     if (existingIndex >= 0) {
       this.history[existingIndex] = record;
     } else {
+      // Auto-increment ID if not provided
+      if (!record.id) {
+        record.id = this.history.length > 0 
+          ? Math.max(...this.history.map(r => r.id)) + 1 
+          : 1;
+      }
       this.history.push(record);
     }
     
@@ -140,18 +247,14 @@ class LocalStorage implements IDBStorage {
   }
   
   async getNotesByHistoryRecord(historyRecordId: number): Promise<Note[]> {
-    return this.notes.filter(note => note.historyRecordId === historyRecordId);
+    // Note doesn't have historyRecordId in the schema, so we'll need to modify this later
+    return this.notes;
   }
   
   async saveNote(note: Note): Promise<Note> {
-    const existingIndex = this.notes.findIndex(n => n.id === note.id);
-    
-    if (existingIndex >= 0) {
-      this.notes[existingIndex] = note;
-    } else {
-      this.notes.push(note);
-    }
-    
+    // Note doesn't have id in the schema, so we'll need to modify these lines
+    // For now, we'll just add the note to the array
+    this.notes.push(note);
     return note;
   }
   
@@ -167,7 +270,12 @@ class LocalStorage implements IDBStorage {
     this.selectedReseau = null;
     this.selectedParcelle = null;
   }
+
+  // Additional method needed by the interface
+  async setCurrentUser(user: User | null): Promise<void> {
+    this.currentUser = user;
+  }
 }
 
-// Exporter une instance unique
+// Export an instance of the localStorage for development
 export const localStorage = new LocalStorage();

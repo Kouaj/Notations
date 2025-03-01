@@ -6,7 +6,8 @@ export interface IDBStorage {
   getCurrentUser: () => Promise<User | null>;
   saveUser: (user: User) => Promise<User>;
   getUsers: () => Promise<User[]>;
-  getUserById: (id: number) => Promise<User | null>;
+  getUserById: (id: string) => Promise<User | null>;
+  setCurrentUser: (user: User | null) => Promise<void>;
   
   // Réseaux
   getReseaux: () => Promise<Reseau[]>;
@@ -21,11 +22,11 @@ export interface IDBStorage {
   getParcellesByReseau: (reseauId: number) => Promise<Parcelle[]>;
   saveParcelle: (parcelle: Parcelle) => Promise<Parcelle>;
   getSelectedParcelle: () => Promise<Parcelle | null>;
-  setSelectedParcelle: (parcelle: Parcelle) => Promise<void>;
+  setSelectedParcelle: (parcelle: Parcelle | null) => Promise<void>;
   
   // Historique et notations
   getHistory: () => Promise<HistoryRecord[]>;
-  getHistoryByUser: (userId: number) => Promise<HistoryRecord[]>;
+  getHistoryByUser: (userId: string) => Promise<HistoryRecord[]>;
   getHistoryByParcelle: (parcelleId: number) => Promise<HistoryRecord[]>;
   getHistoryByReseau: (reseauId: number) => Promise<HistoryRecord[]>;
   saveHistory: (record: HistoryRecord) => Promise<HistoryRecord>;
