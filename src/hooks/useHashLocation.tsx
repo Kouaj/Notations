@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "wouter/use-location";
+import { useState, useEffect, useCallback } from "react";
 
 /**
  * Un hook personnalisé pour utiliser le hash comme mécanisme de navigation
