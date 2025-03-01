@@ -1,4 +1,3 @@
-
 import { Parcelle, Reseau, HistoryRecord, User } from '@/shared/schema';
 
 // Storage interface for IndexedDB operations
@@ -9,6 +8,7 @@ export interface IDBStorage {
   getUserById(id: string): Promise<User | null>;
   getCurrentUser(): Promise<User | null>;
   setCurrentUser(user: User | null): Promise<void>;
+  clearAllUsers(): Promise<boolean>; // Nouvelle méthode
   
   // Réseaux
   getReseaux(): Promise<Reseau[]>;

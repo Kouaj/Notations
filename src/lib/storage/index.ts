@@ -1,4 +1,3 @@
-
 import { UserStorage } from './userStorage';
 import { ReseauStorage } from './reseauStorage';
 import { ParcelleStorage } from './parcelleStorage';
@@ -41,6 +40,17 @@ class IndexedDBStorage implements IDBStorage {
       return await this.userStorage.setCurrentUser(user);
     } catch (error) {
       console.error("Error setting current user:", error);
+    }
+  }
+
+  async clearAllUsers() {
+    try {
+      await this.userStorage.clearAllUsers();
+      console.log("All users cleared from storage interface");
+      return true;
+    } catch (error) {
+      console.error("Error clearing all users:", error);
+      return false;
     }
   }
 

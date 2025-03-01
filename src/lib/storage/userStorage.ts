@@ -67,4 +67,26 @@ export class UserStorage extends BaseStorage {
       throw error;
     }
   }
+
+  async clearAllUsers(): Promise<void> {
+    try {
+      console.log("Clearing all users from database...");
+      // Vider la table des utilisateurs
+      await this.performTransaction(
+        STORES.USERS,
+        'readwrite',
+        store => store.clear()
+      );
+      // Vider également l'utilisateur actuel
+      await this.performTransaction(
+        STORES.CURRENT_USER,
+        'readwrite',
+        store => store.clear()
+      );
+      console.log("All users have been cleared successfully");
+    } catch (error) {
+      console.error("Error clearing users:", error);
+      throw error;
+    }
+  }
 }
