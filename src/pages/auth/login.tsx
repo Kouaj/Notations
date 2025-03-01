@@ -70,13 +70,14 @@ export default function Login() {
     try {
       // Récupérer tous les utilisateurs
       const users = await storage.getUsers();
-      console.log("Login: Utilisateurs récupérés:", users.length, users);
+      console.log("Login: Utilisateurs récupérés:", users.length);
+      console.log("Login: Liste des utilisateurs:", JSON.stringify(users, null, 2));
       
       // Trouver l'utilisateur par email
       const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (!user) {
-        console.log("Login: Utilisateur non trouvé");
+        console.log("Login: Utilisateur non trouvé pour email:", email);
         setErrors({ general: "Email ou mot de passe incorrect" });
         toast({
           title: "Erreur de connexion",
@@ -86,6 +87,8 @@ export default function Login() {
         setIsLoading(false);
         return;
       }
+      
+      console.log("Login: Utilisateur trouvé:", user);
       
       // Vérifier le mot de passe - sécurisation minimale en base64
       const hashedPassword = btoa(password);

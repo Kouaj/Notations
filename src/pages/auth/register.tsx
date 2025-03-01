@@ -142,7 +142,8 @@ export default function Register() {
       // Stockage du mot de passe simplifié en base64 (pour démo seulement)
       const hashedPassword = btoa(password);
       localStorage.setItem(`user_${id}_password`, hashedPassword);
-      console.log("Register: Mot de passe stocké dans localStorage");
+      console.log("Register: Mot de passe stocké dans localStorage avec clé:", `user_${id}_password`);
+      console.log("Register: Mot de passe hashé:", hashedPassword);
       
       // Sauvegarde de l'utilisateur
       try {
@@ -158,20 +159,16 @@ export default function Register() {
           throw new Error("L'utilisateur n'a pas été sauvegardé correctement");
         }
         
-        // Définir comme utilisateur courant
-        await storage.setCurrentUser(verifiedUser);
-        console.log("Register: Utilisateur défini comme courant");
-        
         toast({
           title: "Inscription réussie",
           description: "Votre compte a été créé avec succès",
           variant: "success"
         });
         
-        // Redirection plus douce
+        // Redirection vers la page de connexion après l'inscription
         setTimeout(() => {
-          console.log("Register: Redirection vers la page d'accueil");
-          setLocation('/');
+          console.log("Register: Redirection vers la page de connexion");
+          setLocation('/auth/login');
         }, 1000);
       } catch (saveError: any) {
         console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
