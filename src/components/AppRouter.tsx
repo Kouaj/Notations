@@ -45,21 +45,25 @@ export const useHashLocation = (): [string, (to: string) => void] => {
 // Composant pour réinitialiser les utilisateurs
 function ResetUsersButton() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-
+  
   const handleReset = async () => {
     try {
+      console.log("Tentative de réinitialisation des utilisateurs...");
       const success = await storage.clearAllUsers();
+      console.log("Résultat de la réinitialisation:", success);
+      
       if (success) {
         toast({
           title: "Réinitialisation réussie",
           description: "Tous les utilisateurs ont été supprimés",
         });
-        // Rediriger vers la page de connexion
+        
+        // Rediriger vers la page de connexion avec un délai
         setTimeout(() => {
+          console.log("Redirection vers la page de connexion...");
           window.location.hash = "#/auth/login";
           window.location.reload(); // Recharger la page pour s'assurer que tout est réinitialisé
-        }, 1000);
+        }, 1500);
       } else {
         toast({
           title: "Erreur",

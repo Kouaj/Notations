@@ -107,15 +107,16 @@ export default function Register() {
       console.log("Register: Création d'un nouvel utilisateur:", newUser);
       
       // Save user to database
-      const savedUser = await storage.saveUser(newUser);
-      console.log("Register: Utilisateur sauvegardé:", savedUser);
+      await storage.saveUser(newUser);
+      console.log("Register: Utilisateur sauvegardé");
       
       // For demo purposes only - in real app, NEVER store passwords client-side
       // This is only for demonstration and should be replaced with proper authentication
       localStorage.setItem(`user_${id}_password`, btoa(password));
       
       // Set as current user
-      await storage.setCurrentUser(savedUser);
+      await storage.setCurrentUser(newUser);
+      console.log("Register: Utilisateur défini comme courant");
       
       console.log("Register: Inscription réussie");
       toast({
@@ -125,8 +126,9 @@ export default function Register() {
       
       // Ajouter un délai pour s'assurer que le currentUser est bien enregistré
       setTimeout(() => {
+        console.log("Register: Redirection vers la page d'accueil");
         setLocation('/');
-      }, 500);
+      }, 1000);
     } catch (error) {
       console.error("Registration error:", error);
       toast({

@@ -18,8 +18,12 @@ class IndexedDBStorage implements IDBStorage {
   }
 
   async saveUser(user: User) {
-    await this.userStorage.saveUser(user);
-    return user;
+    try {
+      return await this.userStorage.saveUser(user);
+    } catch (error) {
+      console.error("Error in storage interface while saving user:", error);
+      throw error;
+    }
   }
 
   async getUserById(id: string) {
@@ -45,9 +49,9 @@ class IndexedDBStorage implements IDBStorage {
 
   async clearAllUsers() {
     try {
-      await this.userStorage.clearAllUsers();
-      console.log("All users cleared from storage interface");
-      return true;
+      const result = await this.userStorage.clearAllUsers();
+      console.log("All users cleared from storage interface, result:", result);
+      return result;
     } catch (error) {
       console.error("Error clearing all users:", error);
       return false;

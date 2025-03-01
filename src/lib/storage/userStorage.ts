@@ -23,6 +23,7 @@ export class UserStorage extends BaseStorage {
         'readwrite',
         store => store.put(user)
       );
+      console.log("User saved successfully:", user);
       return user; // Assurons-nous de retourner l'utilisateur créé
     } catch (error) {
       console.error("Error saving user:", error);
@@ -58,11 +59,13 @@ export class UserStorage extends BaseStorage {
 
   async setCurrentUser(user: User | null): Promise<void> {
     try {
+      console.log("Setting current user:", user);
       await this.performTransaction(
         STORES.CURRENT_USER,
         'readwrite',
         store => store.put(user, 'current')
       );
+      console.log("Current user set successfully");
     } catch (error) {
       console.error("Error setting current user:", error);
       throw error;
@@ -85,10 +88,10 @@ export class UserStorage extends BaseStorage {
         store => store.clear()
       );
       console.log("All users have been cleared successfully");
-      return true; // Ajout du retour explicite pour indiquer que l'opération a réussi
+      return true; // Retourne true pour indiquer que l'opération a réussi
     } catch (error) {
       console.error("Error clearing users:", error);
-      return false; // Ajout du retour false en cas d'erreur
+      return false; // Retourne false en cas d'erreur
     }
   }
 }
