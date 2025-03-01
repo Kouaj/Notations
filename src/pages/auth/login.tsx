@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useLocation } from 'wouter';
 import { storage } from '@/lib/storage';
+import { User } from '@/shared/schema';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -15,10 +16,19 @@ const loginSchema = z.object({
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const checkCurrentUser = async () => {
+      const user = await storage.getCurrentUser();
+      if (user) {
+        setLocation('/');
+      }
+    };
+    checkCurrentUser();
+  }, [setLocation]);
 
   const validateForm = () => {
     try {
@@ -40,95 +50,60 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login: Tentative de connexion avec email:", email);
     
-    if (!validateForm()) {
-      console.log("Login: Validation du formulaire échouée");
-      return;
-    }
-
-    setIsLoading(true);
-    setErrors({});
+    if (!validateForm()) return;
 
     try {
-      // Récupérer tous les utilisateurs
-      const users = await storage.getUsers();
-      console.log("Login: Utilisateurs récupérés:", users.length);
+      // Simple password hashing (in production, use a proper hashing library)
+      const hashedPassword = btoa(password);
       
-      // Trouver l'utilisateur par email (insensible à la casse)
-      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      // Get users and check if email exists
+      const users = await storage.getUsers();
+      const user = users.find(u => u.email === email);
       
       if (!user) {
-        console.log("Login: Utilisateur non trouvé pour email:", email);
-        setErrors({ general: "Email ou mot de passe incorrect" });
         toast({
           title: "Erreur de connexion",
-          description: "Email ou mot de passe incorrect",
+          description: "Utilisateur non trouvé. Veuillez vous inscrire.",
           variant: "destructive"
         });
-        setIsLoading(false);
         return;
       }
       
-      console.log("Login: Utilisateur trouvé:", user);
-      
-      // Vérifier le mot de passe - sécurisation minimale en base64
-      const hashedPassword = btoa(password);
-      const storedPasswordKey = `user_${user.id}_password`;
-      const storedPassword = localStorage.getItem(storedPasswordKey);
-      
-      console.log("Login: Vérification du mot de passe pour userId:", user.id);
-      
-      if (hashedPassword === storedPassword) {
-        console.log("Login: Mot de passe correct, connexion réussie");
-        
-        // Définir l'utilisateur actuel
+      // For demo purposes only - in real app, NEVER store passwords client-side
+      // This is only for demonstration and should be replaced with proper authentication
+      if (hashedPassword === localStorage.getItem(`user_${user.id}_password`)) {
         await storage.setCurrentUser(user);
-        console.log("Login: Utilisateur actuel défini:", user);
-        
         toast({
           title: "Connexion réussie",
           description: "Vous êtes maintenant connecté"
         });
-        
         setLocation('/');
       } else {
-        console.log("Login: Mot de passe incorrect");
-        
-        setErrors({ general: "Email ou mot de passe incorrect" });
         toast({
           title: "Erreur de connexion",
-          description: "Email ou mot de passe incorrect",
+          description: "Mot de passe incorrect",
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error("Login error:", error);
-      setErrors({ general: "Une erreur s'est produite lors de la connexion" });
       toast({
         title: "Erreur",
         description: "Une erreur s'est produite lors de la connexion",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
+    <div className="flex flex-col items-center justify-center py-12">
       <div className="w-full max-w-md px-8 py-10 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-purple-800">Connexion</h1>
-        
-        {errors.general && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {errors.general}
-          </div>
-        )}
+        <h1 className="text-2xl font-bold text-center mb-6">Connexion</h1>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+            <label htmlFor="email" className="text-sm font-medium">Email</label>
             <Input
               id="email"
               type="email"
@@ -141,7 +116,7 @@ export default function Login() {
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe</label>
+            <label htmlFor="password" className="text-sm font-medium">Mot de passe</label>
             <Input
               id="password"
               type="password"
@@ -152,13 +127,7 @@ export default function Login() {
             {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
           </div>
           
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={isLoading}
-          >
-            {isLoading ? "Connexion en cours..." : "Se connecter"}
-          </Button>
+          <Button type="submit" className="w-full">Se connecter</Button>
         </form>
         
         <div className="mt-4 text-center">

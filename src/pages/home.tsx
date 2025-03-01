@@ -12,20 +12,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Parcelle, Note, HistoryRecord, NotationType, PartiePlante, Reseau } from "@/shared/schema";
 import { storage } from "@/lib/storage/index";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Trash2, XCircle, Check, Image, Upload } from "lucide-react";
+import { Trash2, XCircle, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Home() {
-  const [location, setLocation] = useLocation();
+  const [_, setLocation] = useLocation();
   const [reseaux, setReseaux] = useState<Reseau[]>([]);
   const [parcelles, setParcelles] = useState<Parcelle[]>([]);
   const [selectedReseau, setSelectedReseau] = useState<Reseau | null>(null);
   const [selectedParcelle, setSelectedParcelle] = useState<Parcelle | null>(null);
   const [selectedPlacette, setSelectedPlacette] = useState<number | null>(null);
-  const [notationType, setNotationType] = useState<NotationType | null>(null);
-  const [partie, setPartie] = useState<PartiePlante | null>(null);
+  const [notationType, setNotationType] = useState<NotationType>("maladie");
+  const [partie, setPartie] = useState<PartiePlante>("feuilles");
   const [notes, setNotes] = useState<Note[]>([]);
   const [showNotes, setShowNotes] = useState(false);
   const [currentNote, setCurrentNote] = useState({
@@ -36,36 +34,16 @@ export default function Home() {
   });
   const [showContinueDialog, setShowContinueDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  // États pour les types spécifiques
+  // Nouveaux états pour les types spécifiques
   const [hauteurIR, setHauteurIR] = useState<string>("");
   const [hauteurCavaillon, setHauteurCavaillon] = useState<string>("");
   const [nbVDT, setNbVDT] = useState<string>("");
   const [fait, setFait] = useState<boolean>(false);
-  // Nouvel état pour le commentaire
-  const [commentaire, setCommentaire] = useState<string>("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string>("");
-  // État pour suivre d'où on vient
-  const [fromHistory, setFromHistory] = useState<boolean>(false);
   
   const { toast } = useToast();
   const mildouInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Détecter si l'on vient de l'historique
-    const checkRoute = () => {
-      const fromHistoryPage = location.includes("history");
-      setFromHistory(fromHistoryPage);
-      
-      // Réinitialiser si on revient de l'historique
-      if (fromHistoryPage) {
-        resetAllFields();
-      }
-    };
-    
-    checkRoute();
-    
     Promise.all([
       storage.getReseaux(),
       storage.getParcelles(),
@@ -87,7 +65,7 @@ export default function Home() {
         }
       }
     });
-  }, [location]);
+  }, []);
 
   useEffect(() => {
     if (selectedReseau) {
@@ -95,67 +73,15 @@ export default function Home() {
       if (selectedParcelle && selectedParcelle.reseauId !== selectedReseau.id) {
         setSelectedParcelle(null);
         setSelectedPlacette(null);
-        setNotationType(null);
-        setPartie(null);
       }
     }
   }, [selectedReseau, parcelles]);
 
-  // Réinitialisation complète des champs
-  const resetAllFields = () => {
-    setSelectedReseau(null);
-    setSelectedParcelle(null);
-    setSelectedPlacette(null);
-    setNotationType(null);
-    setPartie(null);
-    setNotes([]);
-    setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
-    setHauteurIR("");
-    setHauteurCavaillon("");
-    setNbVDT("");
-    setFait(false);
-    setCommentaire("");
-    setPhoto(null);
-    setPhotoUrl("");
-    setShowNotes(false);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setPhoto(file);
-      
-      // Prévisualiser l'image
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target && typeof event.target.result === 'string') {
-          setPhotoUrl(event.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
-
-      toast({
-        title: "Photo ajoutée",
-        description: `Photo "${file.name}" ajoutée`,
-      });
-    }
-  };
-
   const handleSubmit = () => {
-    if (!selectedParcelle) {
+    if (!selectedParcelle || selectedPlacette === null) {
       toast({
         title: "Erreur",
-        description: "Merci de choisir une parcelle",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Vérifier si la placette est requise pour ce type de notation
-    if (notationType === "maladie" && selectedPlacette === null) {
-      toast({
-        title: "Erreur",
-        description: "Merci de choisir une placette",
+        description: "Merci de choisir une parcelle et une placette",
         variant: "destructive"
       });
       return;
@@ -166,8 +92,8 @@ export default function Home() {
       oidium: Number(currentNote.oidium) || 0,
       BR: Number(currentNote.BR) || 0,
       botrytis: Number(currentNote.botrytis) || 0,
-      partie: partie || "feuilles",
-      type: notationType || "maladie",
+      partie,
+      type: notationType,
       date: new Date().toISOString()
     };
 
@@ -177,7 +103,7 @@ export default function Home() {
       note.hauteurCavaillon = Number(hauteurCavaillon) || 0;
     } else if (notationType === "vers_terre") {
       note.nbVDT = Number(nbVDT) || 0;
-    } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType || "")) {
+    } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType)) {
       note.fait = fait;
     }
 
@@ -185,6 +111,10 @@ export default function Home() {
     
     // Réinitialiser les valeurs des champs
     setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
+    setHauteurIR("");
+    setHauteurCavaillon("");
+    setNbVDT("");
+    setFait(false);
     
     setTimeout(() => {
       if (mildouInputRef.current && notationType === "maladie") {
@@ -205,7 +135,7 @@ export default function Home() {
   };
 
   const handleCancel = () => {
-    if (notes.length > 0 || commentaire || photo) {
+    if (notes.length > 0) {
       setShowCancelDialog(true);
     } else {
       resetNotation();
@@ -224,9 +154,6 @@ export default function Home() {
     setHauteurCavaillon("");
     setNbVDT("");
     setFait(false);
-    setCommentaire("");
-    setPhoto(null);
-    setPhotoUrl("");
     setShowNotes(false);
     toast({
       title: "Notation annulée",
@@ -264,60 +191,10 @@ export default function Home() {
   };
 
   const handleFinish = async () => {
-    if (!selectedReseau || !selectedParcelle) {
+    if (!selectedReseau || !selectedParcelle || selectedPlacette === null || notes.length === 0) {
       toast({
         title: "Erreur",
-        description: "Merci de choisir un réseau et une parcelle",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Vérifier le type de notation
-    if (!notationType) {
-      toast({
-        title: "Erreur",
-        description: "Merci de choisir un type de notation",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Vérifier si la placette est requise pour ce type de notation
-    if (notationType === "maladie" && selectedPlacette === null) {
-      toast({
-        title: "Erreur",
-        description: "Merci de choisir une placette",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Vérifier les données en fonction du type de notation
-    if (notationType === "maladie" && notes.length === 0) {
-      toast({
-        title: "Erreur",
-        description: "Merci d'ajouter au moins une note pour ce type de notation",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Pour les types de notation nécessitant un marquage "fait", vérifier si c'est fait
-    if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && !fait) {
-      toast({
-        title: "Erreur",
-        description: "Merci de marquer l'opération comme réalisée avant de terminer",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Pour le type commentaire, vérifier si un commentaire a été saisi
-    if (notationType === "commentaire" && !commentaire) {
-      toast({
-        title: "Erreur",
-        description: "Merci d'entrer un commentaire avant de terminer",
+        description: "Merci de compléter tous les champs et d'ajouter au moins une note",
         variant: "destructive"
       });
       return;
@@ -334,57 +211,61 @@ export default function Home() {
         return;
       }
 
-      let photoDataUrl = "";
-      if (photo) {
-        photoDataUrl = await storage.savePhoto(photo);
-      }
+      // Pour les types de notation autres que "maladie", on crée un enregistrement simplifié
+      if (notationType !== "maladie") {
+        const latestNote = notes[notes.length - 1];
+        const historyRecord: HistoryRecord = {
+          id: Date.now(),
+          reseauName: selectedReseau.name,
+          reseauId: selectedReseau.id,
+          parcelleName: selectedParcelle.name,
+          parcelleId: selectedParcelle.id,
+          placetteId: selectedPlacette,
+          notes: notes,
+          count: notes.length,
+          frequency: {},
+          intensity: {},
+          type: notationType,
+          partie: partie,
+          date: new Date().toISOString(),
+          userId: currentUser.id
+        };
 
-      // Créer l'enregistrement d'historique
-      const historyRecord: HistoryRecord = {
-        id: Date.now(),
-        reseauName: selectedReseau.name,
-        reseauId: selectedReseau.id,
-        parcelleName: selectedParcelle.name,
-        parcelleId: selectedParcelle.id,
-        placetteId: !["pollinisateur", "pot_barber", "commentaire"].includes(notationType) 
-          ? (selectedPlacette || 0) 
-          : -1,
-        notes: notationType === "maladie" ? notes : [],
-        count: notes.length,
-        frequency: {},
-        intensity: {},
-        type: notationType,
-        partie: partie || "feuilles",
-        date: new Date().toISOString(),
-        userId: currentUser.id
-      };
-
-      // Ajouter les données spécifiques en fonction du type de notation
-      if (notationType === "maladie") {
-        const results = calculateResults();
-        if (results) {
-          historyRecord.frequency = results.frequency;
-          historyRecord.intensity = results.intensity;
+        // Ajouter les propriétés spécifiques au type de notation
+        if (notationType === "recouvrement" && latestNote.hauteurIR !== undefined && latestNote.hauteurCavaillon !== undefined) {
+          historyRecord.hauteurIR = latestNote.hauteurIR;
+          historyRecord.hauteurCavaillon = latestNote.hauteurCavaillon;
+        } else if (notationType === "vers_terre" && latestNote.nbVDT !== undefined) {
+          historyRecord.nbVDT = latestNote.nbVDT;
+        } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && latestNote.fait !== undefined) {
+          historyRecord.fait = latestNote.fait;
         }
-      } else if (notationType === "recouvrement" && hauteurIR && hauteurCavaillon) {
-        historyRecord.hauteurIR = Number(hauteurIR);
-        historyRecord.hauteurCavaillon = Number(hauteurCavaillon);
-      } else if (notationType === "vers_terre" && nbVDT) {
-        historyRecord.nbVDT = Number(nbVDT);
-      } else if (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType)) {
-        historyRecord.fait = fait;
-      } else if (notationType === "commentaire") {
-        historyRecord.commentaire = commentaire;
-        historyRecord.photoUrl = photoDataUrl;
+
+        await storage.saveHistory(historyRecord);
+      } else {
+        // Pour le type "maladie", on utilise le calcul des résultats
+        const results = calculateResults();
+        if (!results) return;
+
+        const historyRecord: HistoryRecord = {
+          id: Date.now(),
+          reseauName: selectedReseau.name,
+          reseauId: selectedReseau.id,
+          parcelleName: selectedParcelle.name,
+          parcelleId: selectedParcelle.id,
+          placetteId: selectedPlacette,
+          notes,
+          count: notes.length,
+          frequency: results.frequency,
+          intensity: results.intensity,
+          type: notationType,
+          partie: partie,
+          date: new Date().toISOString(),
+          userId: currentUser.id
+        };
+
+        await storage.saveHistory(historyRecord);
       }
-
-      await storage.saveHistory(historyRecord);
-
-      toast({
-        title: "Enregistré",
-        description: `La notation de type ${notationType} a été enregistrée avec succès`,
-        variant: "success"
-      });
 
       setShowContinueDialog(true);
     } catch (error) {
@@ -400,51 +281,41 @@ export default function Home() {
   const handleContinue = (shouldContinue: boolean) => {
     setShowContinueDialog(false);
     if (shouldContinue) {
-      // Réinitialiser uniquement les notes et les champs spécifiques
       setNotes([]);
-      setCurrentNote({ mildiou: "", oidium: "", BR: "", botrytis: "" });
+      setShowNotes(false);
+      // Réinitialiser les champs des types spécifiques
       setHauteurIR("");
       setHauteurCavaillon("");
       setNbVDT("");
       setFait(false);
-      setCommentaire("");
-      setPhoto(null);
-      setPhotoUrl("");
-      setShowNotes(false);
     } else {
-      // Réinitialiser tout et redirectionner vers l'historique
       storage.setSelectedReseau(null);
       storage.setSelectedParcelle(null);
-      resetAllFields();
-      setLocation("/history");
+      setLocation("/parcelles");
     }
   };
 
   const isEcumesReseau = selectedReseau?.name === "Ecumes";
   const results = calculateResults();
-  const needsPlacette = !["pollinisateur", "pot_barber", "commentaire"].includes(notationType || "");
 
   return (
-    <div className="container mx-auto p-1 space-y-2">
+    <div className="container mx-auto p-2 space-y-4">
       <Card className="shadow-md">
-        <CardHeader className="py-2 px-4">
-          <CardTitle className="text-lg">Notation</CardTitle>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-lg">Notation des maladies</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-1 px-4 py-1">
+        <CardContent className="space-y-3 px-4 py-2">
           <div className="space-y-1">
             <label className="text-sm font-medium">Réseau</label>
-            <Select 
-              value={selectedReseau?.id.toString()} 
-              onValueChange={(value) => {
-                const reseau = reseaux.find(r => r.id === Number(value));
-                setSelectedReseau(reseau || null);
-                storage.setSelectedReseau(reseau || null);
-                setSelectedParcelle(null);
-                setSelectedPlacette(null);
-                setNotationType(null);
-                setPartie(null);
-              }}
-            >
+            <Select value={selectedReseau?.id.toString()} onValueChange={(value) => {
+              const reseau = reseaux.find(r => r.id === Number(value));
+              setSelectedReseau(reseau || null);
+              storage.setSelectedReseau(reseau || null);
+              setSelectedParcelle(null);
+              setSelectedPlacette(null);
+              // Réinitialiser le type de notation à "maladie" par défaut
+              setNotationType("maladie");
+            }}>
               <SelectTrigger>
                 <SelectValue placeholder="Choisir un réseau" />
               </SelectTrigger>
@@ -461,17 +332,12 @@ export default function Home() {
           {selectedReseau && (
             <div className="space-y-1">
               <label className="text-sm font-medium">Parcelle</label>
-              <Select 
-                value={selectedParcelle?.id.toString()} 
-                onValueChange={(value) => {
-                  const parcelle = parcelles.find(p => p.id === Number(value));
-                  setSelectedParcelle(parcelle || null);
-                  storage.setSelectedParcelle(parcelle || null);
-                  setSelectedPlacette(null);
-                  setNotationType(null);
-                  setPartie(null);
-                }}
-              >
+              <Select value={selectedParcelle?.id.toString()} onValueChange={(value) => {
+                const parcelle = parcelles.find(p => p.id === Number(value));
+                setSelectedParcelle(parcelle || null);
+                storage.setSelectedParcelle(parcelle || null);
+                setSelectedPlacette(null);
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une parcelle" />
                 </SelectTrigger>
@@ -490,51 +356,8 @@ export default function Home() {
 
           {selectedParcelle && (
             <div className="space-y-1">
-              <label className="text-sm font-medium">Type de notation</label>
-              <Select 
-                value={notationType || ""} 
-                onValueChange={(value: NotationType) => {
-                  setNotationType(value);
-                  // Réinitialiser les notes lors du changement de type
-                  setNotes([]);
-                  setFait(false);
-                  setCommentaire("");
-                  setPhoto(null);
-                  setPhotoUrl("");
-                  // Réinitialiser la placette et la partie
-                  setSelectedPlacette(null);
-                  setPartie(null);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Type de notation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="maladie">Maladie</SelectItem>
-                  <SelectItem value="pheno">Phéno</SelectItem>
-                  <SelectItem value="ravageur">Ravageur</SelectItem>
-                  <SelectItem value="commentaire">Commentaire</SelectItem>
-                  {isEcumesReseau && (
-                    <>
-                      <SelectItem value="recouvrement">Recouvrement</SelectItem>
-                      <SelectItem value="analyse_sols">Analyse de sols</SelectItem>
-                      <SelectItem value="vers_terre">Vers de terre</SelectItem>
-                      <SelectItem value="pollinisateur">Pollinisateur</SelectItem>
-                      <SelectItem value="pot_barber">Pot Barber</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {selectedParcelle && notationType && needsPlacette && (
-            <div className="space-y-1">
               <label className="text-sm font-medium">Placette</label>
-              <Select 
-                value={selectedPlacette?.toString()} 
-                onValueChange={(value) => setSelectedPlacette(Number(value))}
-              >
+              <Select value={selectedPlacette?.toString()} onValueChange={(value) => setSelectedPlacette(Number(value))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une placette" />
                 </SelectTrigger>
@@ -549,13 +372,39 @@ export default function Home() {
             </div>
           )}
 
-          {notationType === "maladie" && selectedPlacette !== null && (
+          {selectedPlacette !== null && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Type de notation</label>
+              <Select value={notationType} onValueChange={(value: NotationType) => {
+                setNotationType(value as NotationType);
+                // Réinitialiser les notes lors du changement de type
+                setNotes([]);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type de notation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="maladie">Maladie</SelectItem>
+                  <SelectItem value="pheno">Phéno</SelectItem>
+                  <SelectItem value="ravageur">Ravageur</SelectItem>
+                  {isEcumesReseau && (
+                    <>
+                      <SelectItem value="recouvrement">Recouvrement</SelectItem>
+                      <SelectItem value="analyse_sols">Analyse de sols</SelectItem>
+                      <SelectItem value="vers_terre">Vers de terre</SelectItem>
+                      <SelectItem value="pollinisateur">Pollinisateur</SelectItem>
+                      <SelectItem value="pot_barber">Pot Barber</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {notationType === "maladie" && (
             <div className="space-y-1">
               <label className="text-sm font-medium">Partie de la plante</label>
-              <Select 
-                value={partie || ""} 
-                onValueChange={(value: PartiePlante) => setPartie(value)}
-              >
+              <Select value={partie} onValueChange={(value: PartiePlante) => setPartie(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Partie de la plante" />
                 </SelectTrigger>
@@ -568,7 +417,7 @@ export default function Home() {
           )}
 
           {notationType === "maladie" && partie && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Mildiou</label>
                 <Input
@@ -605,8 +454,8 @@ export default function Home() {
             </div>
           )}
 
-          {notationType === "recouvrement" && selectedPlacette !== null && (
-            <div className="grid grid-cols-2 gap-2">
+          {notationType === "recouvrement" && (
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Hauteur IR</label>
                 <Input
@@ -626,7 +475,7 @@ export default function Home() {
             </div>
           )}
 
-          {notationType === "vers_terre" && selectedPlacette !== null && (
+          {notationType === "vers_terre" && (
             <div className="space-y-1">
               <label className="text-sm font-medium">Nombre de vers de terre</label>
               <Input
@@ -637,8 +486,8 @@ export default function Home() {
             </div>
           )}
 
-          {["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType || "") && (
-            <div className="flex items-center space-x-2 py-1">
+          {["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && (
+            <div className="flex items-center space-x-2 py-2">
               <Checkbox 
                 id="fait" 
                 checked={fait} 
@@ -650,97 +499,38 @@ export default function Home() {
             </div>
           )}
 
-          {notationType === "commentaire" && (
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Commentaire</label>
-                <Textarea 
-                  value={commentaire}
-                  onChange={(e) => setCommentaire(e.target.value)}
-                  placeholder="Saisissez votre commentaire ici..."
-                  className="min-h-[100px]"
-                />
-              </div>
-              
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Photo</label>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-4 w-4 mr-1" />
-                    Ajouter une photo
-                  </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                  />
-                </div>
-                
-                {photoUrl && (
-                  <div className="mt-2 relative">
-                    <img 
-                      src={photoUrl} 
-                      alt="Photo" 
-                      className="max-h-[200px] rounded-md object-cover"
-                    />
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      className="absolute top-1 right-1"
-                      onClick={() => {
-                        setPhoto(null);
-                        setPhotoUrl("");
-                      }}
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {(notationType === "pheno" || notationType === "ravageur") && (
-            <div className="p-2 bg-muted rounded-md text-center text-sm">
+            <div className="p-3 bg-muted rounded-md text-center text-sm">
               Les champs pour {notationType === "pheno" ? "phénologie" : "ravageurs"} seront ajoutés dans une future version.
             </div>
           )}
 
-          {notationType && (
+          {notationType && (notationType !== "maladie" || partie) && (
             <div className="flex gap-2 pt-1">
-              {notationType === "maladie" && partie && (
-                <Button 
-                  variant="default" 
-                  className="flex-1" 
-                  onClick={handleSubmit}
-                  disabled={
+              <Button 
+                variant="default" 
+                className="flex-1" 
+                onClick={handleSubmit}
+                disabled={
+                  (notationType === "maladie" && 
                     !currentNote.mildiou && 
                     !currentNote.oidium && 
                     !currentNote.BR && 
-                    !currentNote.botrytis
-                  }
-                >
-                  Ajouter
-                </Button>
-              )}
+                    !currentNote.botrytis) ||
+                  (notationType === "recouvrement" && 
+                    !hauteurIR && 
+                    !hauteurCavaillon) ||
+                  (notationType === "vers_terre" && 
+                    !nbVDT)
+                }
+              >
+                Ajouter
+              </Button>
               <Button 
                 variant="secondary" 
                 className="flex-1" 
                 onClick={handleFinish}
-                disabled={
-                  !selectedParcelle ||
-                  (notationType === "maladie" && notes.length === 0) ||
-                  (needsPlacette && selectedPlacette === null) ||
-                  (["analyse_sols", "pollinisateur", "pot_barber"].includes(notationType) && !fait) ||
-                  (notationType === "commentaire" && !commentaire)
-                }
+                disabled={notes.length === 0 && !fait}
               >
                 Terminer
               </Button>
@@ -766,14 +556,14 @@ export default function Home() {
 
       {results && (
         <Card className="shadow-md">
-          <CardHeader className="py-2 px-4">
+          <CardHeader className="py-3 px-4">
             <CardTitle className="flex justify-between items-center text-base">
               <span>Résultats</span>
               <Badge>{notes.length} note{notes.length > 1 ? 's' : ''}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 px-4 py-1">
-            <ScrollArea className="h-[140px]">
+          <CardContent className="space-y-3 px-4 py-2">
+            <ScrollArea className="h-[180px]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -803,7 +593,7 @@ export default function Home() {
             </Button>
             
             {showNotes && notes.length > 0 && (
-              <ScrollArea className="h-[140px] border rounded-md">
+              <ScrollArea className="h-[180px] border rounded-md">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -852,7 +642,7 @@ export default function Home() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => handleContinue(false)}>
-              Non, voir l'historique
+              Non, revenir à la liste des parcelles
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => handleContinue(true)}>
               Oui, poursuivre

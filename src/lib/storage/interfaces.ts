@@ -1,25 +1,19 @@
 
 import { Parcelle, Reseau, HistoryRecord, User } from '@/shared/schema';
-import { IDBPDatabase } from 'idb';
-import { AppDB } from './core';
 
 // Storage interface for IndexedDB operations
 export interface IDBStorage {
-  // Database Initialization
-  initDB(): Promise<IDBPDatabase<AppDB>>;
-  
   // Users
   getUsers(): Promise<User[]>;
-  saveUser(user: User): Promise<User>;
+  saveUser(user: User): Promise<void>;
   getUserById(id: string): Promise<User | null>;
   getCurrentUser(): Promise<User | null>;
   setCurrentUser(user: User | null): Promise<void>;
-  clearAllUsers(): Promise<boolean>;
   
   // Réseaux
   getReseaux(): Promise<Reseau[]>;
   getReseauxByUser(userId: string): Promise<Reseau[]>;
-  saveReseau(reseau: Reseau): Promise<Reseau>;
+  saveReseau(reseau: Reseau): Promise<void>;
   deleteReseau(id: number): Promise<void>;
   updateReseau(reseau: Reseau): Promise<void>;
   setSelectedReseau(reseau: Reseau | null): Promise<void>;
@@ -29,7 +23,7 @@ export interface IDBStorage {
   getParcelles(): Promise<Parcelle[]>;
   getParcellesByUser(userId: string): Promise<Parcelle[]>;
   getParcellesByReseau(reseauId: number, userId: string): Promise<Parcelle[]>;
-  saveParcelle(parcelle: Parcelle): Promise<Parcelle>;
+  saveParcelle(parcelle: Parcelle): Promise<void>;
   deleteParcelle(id: number): Promise<void>;
   updateParcelle(parcelle: Parcelle): Promise<void>;
   setSelectedParcelle(parcelle: Parcelle | null): Promise<void>;
@@ -38,9 +32,6 @@ export interface IDBStorage {
   // Historique
   getHistory(): Promise<HistoryRecord[]>;
   getHistoryByUser(userId: string): Promise<HistoryRecord[]>;
-  saveHistory(record: HistoryRecord): Promise<HistoryRecord>;
+  saveHistory(record: HistoryRecord): Promise<void>;
   deleteHistory(id: number): Promise<void>;
-  
-  // Photos
-  savePhoto(photo: File): Promise<string>;
 }

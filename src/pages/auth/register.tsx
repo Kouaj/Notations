@@ -1,63 +1,51 @@
 
 import React, { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useLocation } from 'wouter';
 import { storage } from '@/lib/storage';
+import { User } from '@/shared/schema';
 import { z } from 'zod';
-import RegisterForm from './components/RegisterForm';
-import ErrorDialog from './components/ErrorDialog';
-import DebugOptions from './components/DebugOptions';
-import { registerUser } from './utils/registrationUtils';
-import { registerSchema, RegisterFormData } from './validation/registerSchema';
+
+const registerSchema = z.object({
+  name: z.string().min(2, { message: "Nom doit contenir au moins 2 caractères" }),
+  email: z.string().email({ message: "Email invalide" }),
+  password: z.string().min(6, { message: "Mot de passe doit contenir au moins 6 caractères" }),
+  confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Les mots de passe ne correspondent pas",
+  path: ["confirmPassword"]
+});
 
 export default function Register() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [errorDetails, setErrorDetails] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
-    general?: string;
   }>({});
   
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    console.log("Register: Page d'inscription chargée");
     const checkCurrentUser = async () => {
-      try {
-        const lastReset = localStorage.getItem('db_reset_timestamp');
-        if (lastReset) {
-          const resetTime = parseInt(lastReset);
-          const currentTime = Date.now();
-          if ((currentTime - resetTime) < 5000) {
-            console.log("Base de données récemment réinitialisée, attente...");
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        
-        // Remove the reference to DB_VERSION which doesn't exist on the storage object
-        const user = await storage.getCurrentUser();
-        console.log("Register: Vérification de l'utilisateur actuel:", user);
-        if (user) {
-          console.log("Register: Utilisateur déjà connecté, redirection vers /");
-          setLocation('/');
-        } else {
-          console.log("Register: Aucun utilisateur connecté, affichage du formulaire d'inscription");
-        }
-      } catch (error) {
-        console.error("Register: Erreur lors de la vérification de l'utilisateur actuel:", error);
+      const user = await storage.getCurrentUser();
+      if (user) {
+        setLocation('/');
       }
     };
     checkCurrentUser();
   }, [setLocation]);
 
-  const validateForm = (formData: RegisterFormData) => {
+  const validateForm = () => {
     try {
-      registerSchema.parse(formData);
+      registerSchema.parse({ name, email, password, confirmPassword });
       setErrors({});
       return true;
     } catch (error) {
@@ -73,99 +61,127 @@ export default function Register() {
     }
   };
 
-  const handleSubmit = async (formData: RegisterFormData) => {
-    console.log("Register: Tentative d'inscription avec email:", formData.email);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (!validateForm(formData)) {
-      console.log("Register: Validation du formulaire échouée");
-      return;
-    }
+    if (!validateForm()) return;
 
-    setIsLoading(true);
-    setErrors({});
-    
     try {
-      await registerUser(formData);
+      // Check if email already exists
+      const users = await storage.getUsers();
+      const emailExists = users.some(u => u.email === email);
       
-      toast({
-        title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès",
-        variant: "success"
-      });
-      
-      console.log("Register: Redirection vers la page de connexion");
-      
-      // Forcer une redirection complète vers la page de connexion
-      setTimeout(() => {
-        console.log("Exécution de la redirection...");
-        window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
-        // Forcer un rechargement pour s'assurer que tout est bien initialisé
-        window.location.reload();
-      }, 1000);
-    } catch (error: any) {
-      console.error("Register: Erreur lors de l'inscription:", error);
-      
-      if (error.message.includes("email est déjà utilisé")) {
-        setErrors({ email: "Cet email est déjà utilisé" });
+      if (emailExists) {
         toast({
           title: "Erreur d'inscription",
           description: "Cet email est déjà utilisé",
           variant: "destructive"
         });
-      } else {
-        const errorMessage = error.message || "Une erreur s'est produite lors de l'inscription";
-        setErrors(prev => ({ ...prev, general: errorMessage }));
-        
-        // Gestion des erreurs de version de base de données
-        if (errorMessage.includes("version")) {
-          console.warn("⚠️ Erreur de version détectée, tentative de récupération...");
-          const success = await storage.clearAllUsers();
-          if (success) {
-            console.log("Base de données réinitialisée avec succès, rechargement...");
-            toast({
-              title: "Réinitialisation nécessaire",
-              description: "La base de données a été réinitialisée. Veuillez réessayer.",
-              variant: "default"
-            });
-            setTimeout(() => window.location.reload(), 2000);
-            return;
-          }
-        }
-        
-        console.error("Détails de l'erreur:", errorMessage);
-        setErrorDetails(`Erreur de sauvegarde: ${errorMessage}`);
-        setShowErrorDialog(true);
-        
-        toast({
-          title: "Erreur d'inscription",
-          description: errorMessage,
-          variant: "destructive"
-        });
+        return;
       }
-    } finally {
-      setIsLoading(false);
+      
+      // Create new user
+      const id = crypto.randomUUID();
+      const newUser: User = {
+        id,
+        email,
+        name
+      };
+      
+      // Save user to database
+      await storage.saveUser(newUser);
+      
+      // For demo purposes only - in real app, NEVER store passwords client-side
+      // This is only for demonstration and should be replaced with proper authentication
+      localStorage.setItem(`user_${id}_password`, btoa(password));
+      
+      // Set as current user
+      await storage.setCurrentUser(newUser);
+      
+      toast({
+        title: "Inscription réussie",
+        description: "Votre compte a été créé avec succès"
+      });
+      
+      setLocation('/');
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de l'inscription",
+        variant: "destructive"
+      });
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
+    <div className="flex flex-col items-center justify-center py-12">
       <div className="w-full max-w-md px-8 py-10 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-purple-800">Inscription</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">Inscription</h1>
         
-        <RegisterForm 
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
-          errors={errors}
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-sm font-medium">Nom</label>
+            <Input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Votre nom"
+              className={errors.name ? "border-red-500" : ""}
+            />
+            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="votre@email.com"
+              className={errors.email ? "border-red-500" : ""}
+            />
+            {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="password" className="text-sm font-medium">Mot de passe</label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={errors.password ? "border-red-500" : ""}
+            />
+            {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="confirmPassword" className="text-sm font-medium">Confirmer le mot de passe</label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={errors.confirmPassword ? "border-red-500" : ""}
+            />
+            {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+          </div>
+          
+          <Button type="submit" className="w-full">S'inscrire</Button>
+        </form>
         
-        <DebugOptions />
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Déjà un compte?{" "}
+            <Button variant="link" className="p-0" onClick={() => setLocation('/auth/login')}>
+              Se connecter
+            </Button>
+          </p>
+        </div>
       </div>
-      
-      <ErrorDialog 
-        open={showErrorDialog} 
-        onOpenChange={setShowErrorDialog}
-        errorDetails={errorDetails}
-      />
     </div>
   );
 }

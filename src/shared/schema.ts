@@ -1,7 +1,6 @@
-
 import { z } from "zod";
 
-export type NotationType = "maladie" | "pheno" | "ravageur" | "recouvrement" | "analyse_sols" | "vers_terre" | "pollinisateur" | "pot_barber" | "commentaire";
+export type NotationType = "maladie" | "pheno" | "ravageur" | "recouvrement" | "analyse_sols" | "vers_terre" | "pollinisateur" | "pot_barber";
 export type PartiePlante = "feuilles" | "grappe";
 
 export interface User {
@@ -45,9 +44,6 @@ export interface Note {
   hauteurCavaillon?: number;
   nbVDT?: number;
   fait?: boolean;
-  // Nouveaux champs pour le type commentaire
-  commentaire?: string;
-  photoUrl?: string;
 }
 
 export interface HistoryRecord {
@@ -70,12 +66,7 @@ export interface HistoryRecord {
   hauteurCavaillon?: number;
   nbVDT?: number;
   fait?: boolean;
-  // Nouveaux champs pour le type commentaire
-  commentaire?: string;
-  photoUrl?: string;
 }
-
-export type History = HistoryRecord;
 
 export interface HistoryGroup {
   parcelleName: string;

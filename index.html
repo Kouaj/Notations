@@ -1,52 +1,14 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#7c3aed" />
-    <title>Notations Viticoles</title>
-    <script type="text/javascript">
-      console.log("Chargement initial - URL:", window.location.href);
-      
-      // Single Page Apps for GitHub Pages
-      // MIT License
-      // https://github.com/rafgraph/spa-github-pages
-      (function(l) {
-        console.log("Script SPA GitHub Pages - URL initial:", l.href);
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          console.log("Redirection détectée - nouveau chemin:", l.pathname.slice(0, -1) + decoded + l.hash);
-          window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
-          );
-        }
-      }(window.location))
-      
-      // Assurer qu'il y a un hash pour le routage basé sur le hash
-      if (!window.location.hash) {
-        console.log("Aucun hash détecté, définition du hash par défaut #/");
-        window.location.hash = "#/";
-      }
-      
-      // Vérifier les données de stockage local
-      console.log("LocalStorage disponible:", typeof localStorage !== 'undefined');
-      if (typeof localStorage !== 'undefined') {
-        try {
-          const keys = Object.keys(localStorage);
-          console.log("Clés LocalStorage:", keys);
-          
-          // Chercher les utilisateurs stockés
-          const userKeys = keys.filter(k => k.includes('user_'));
-          console.log("Clés d'utilisateurs trouvées:", userKeys);
-        } catch (e) {
-          console.error("Erreur lors de la lecture du localStorage:", e);
-        }
-      }
-    </script>
+    <title>Notations - Application de notation viticole</title>
+    <meta name="description" content="Application de suivi et notation des maladies viticoles" />
+    <meta name="author" content="Lovable" />
+    <meta property="og:image" content="/og-image.png" />
   </head>
   <body>
     <div id="root"></div>
