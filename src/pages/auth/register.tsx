@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -168,8 +169,9 @@ export default function Register() {
         // Redirection vers la page de connexion après l'inscription
         setTimeout(() => {
           console.log("Register: Redirection vers la page de connexion");
-          setLocation('/auth/login');
-        }, 1000);
+          // On utilise le hash pour la redirection compatible avec GitHub Pages
+          window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
+        }, 1500);
       } catch (saveError: any) {
         console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
         // Nettoyage en cas d'erreur
