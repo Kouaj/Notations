@@ -1,6 +1,6 @@
 
-import React from "react";
-import { Router, Route } from "wouter";
+import React, { useEffect } from "react";
+import { Router, Route, useLocation } from "wouter";
 import Home from "@/pages/home";
 import Reseaux from "@/pages/reseaux";
 import Parcelles from "@/pages/parcelles";
@@ -11,6 +11,12 @@ import NotFound from "@/pages/not-found";
 import ProtectedRoute from "./ProtectedRoute";
 
 export function AppRouter() {
+  const [location] = useLocation();
+  
+  useEffect(() => {
+    console.log("Current route:", location);
+  }, [location]);
+
   return (
     <Router>
       <Route path="/">
