@@ -4,19 +4,26 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Add console logs to debug rendering
-console.log("Starting application rendering...");
+// Débogage détaillé du processus de rendu
+console.clear();
+console.log("==== DÉBUT DU RENDU DE L'APPLICATION ====");
 
+// Vérifier si l'élément racine existe
 const rootElement = document.getElementById("root");
-console.log("Root element found:", rootElement);
+console.log("Élément racine trouvé:", rootElement);
 
 if (rootElement) {
-  createRoot(rootElement).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-  console.log("App rendered to DOM");
+  try {
+    console.log("Tentative de rendu de l'App dans l'élément racine");
+    createRoot(rootElement).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+    console.log("Rendu de l'App terminé avec succès");
+  } catch (error) {
+    console.error("ERREUR CRITIQUE lors du rendu:", error);
+  }
 } else {
-  console.error("Failed to find root element");
+  console.error("ERREUR FATALE: Élément racine '#root' introuvable dans le DOM");
 }
