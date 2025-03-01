@@ -1,6 +1,6 @@
 
 import { User } from '@/shared/schema';
-import { BaseStorage, STORES } from './core';
+import { BaseStorage, STORES, DB_NAME, DB_VERSION } from './core';
 
 export class UserStorage extends BaseStorage {
   async getUsers(): Promise<User[]> {
