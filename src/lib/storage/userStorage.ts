@@ -1,3 +1,4 @@
+
 import { User } from '@/shared/schema';
 import { BaseStorage, STORES, DB_NAME, DB_VERSION } from './core';
 
@@ -115,55 +116,103 @@ export class UserStorage extends BaseStorage {
 
   async clearAllUsers(): Promise<boolean> {
     try {
-      console.log("clearAllUsers: Starting to clear all user data");
+      console.log("clearAllUsers: Nouvelle approche pour effacer toutes les données utilisateur");
       
-      // 1. Effacer CURRENT_USER store
-      console.log("clearAllUsers: Clearing CURRENT_USER store");
-      await this.performTransaction(
-        STORES.CURRENT_USER,
-        'readwrite',
-        store => store.clear()
-      );
+      // Obtenir une référence directe à la base de données
+      const db = await this.getDB();
       
-      // 2. Effacer USERS store
-      console.log("clearAllUsers: Clearing USERS store");
-      await this.performTransaction(
-        STORES.USERS,
-        'readwrite',
-        store => store.clear()
-      );
-      
-      // 3. Effacer les mots de passe dans localStorage
-      console.log("clearAllUsers: Clearing user passwords from localStorage");
-      const passwordKeys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('user_') && key.endsWith('_password')) {
-          passwordKeys.push(key);
+      // 1. Vider le store CURRENT_USER avec une transaction dédiée
+      return new Promise((resolve) => {
+        try {
+          console.log("clearAllUsers: Phase 1 - Nettoyage de CURRENT_USER");
+          const tx1 = db.transaction(STORES.CURRENT_USER, 'readwrite');
+          const currentUserStore = tx1.objectStore(STORES.CURRENT_USER);
+          
+          const clearReq1 = currentUserStore.clear();
+          
+          clearReq1.onsuccess = () => {
+            console.log("clearAllUsers: CURRENT_USER vidé avec succès");
+            
+            // 2. Vider le store USERS avec une nouvelle transaction
+            try {
+              console.log("clearAllUsers: Phase 2 - Nettoyage de USERS");
+              const tx2 = db.transaction(STORES.USERS, 'readwrite');
+              const usersStore = tx2.objectStore(STORES.USERS);
+              
+              const clearReq2 = usersStore.clear();
+              
+              clearReq2.onsuccess = () => {
+                console.log("clearAllUsers: USERS vidé avec succès");
+                
+                // 3. Nettoyer localStorage
+                console.log("clearAllUsers: Phase 3 - Nettoyage de localStorage");
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && key.startsWith('user_') && key.endsWith('_password')) {
+                    console.log(`clearAllUsers: Suppression de la clé localStorage: ${key}`);
+                    localStorage.removeItem(key);
+                    // Reculer l'index car nous venons de supprimer un élément
+                    i--;
+                  }
+                }
+                
+                console.log("clearAllUsers: Nettoyage complet terminé, vérification...");
+                
+                // Vérifier le résultat avec des promesses indépendantes pour éviter toute contamination
+                setTimeout(async () => {
+                  try {
+                    // Vérification indépendante des utilisateurs
+                    const remainingUsersCheck = await this.performTransaction(
+                      STORES.USERS,
+                      'readonly',
+                      store => store.getAll()
+                    );
+                    
+                    // Vérification indépendante de l'utilisateur actuel
+                    const currentUserCheck = await this.performTransaction(
+                      STORES.CURRENT_USER,
+                      'readonly',
+                      store => store.get('current')
+                    );
+                    
+                    console.log("clearAllUsers: Résultat de vérification - Utilisateurs restants:", remainingUsersCheck?.length || 0);
+                    console.log("clearAllUsers: Résultat de vérification - Utilisateur actuel:", currentUserCheck);
+                    
+                    const success = (!remainingUsersCheck || remainingUsersCheck.length === 0) && !currentUserCheck;
+                    console.log("clearAllUsers: Résultat global:", success ? "SUCCÈS" : "ÉCHEC");
+                    
+                    resolve(success);
+                  } catch (verifyError) {
+                    console.error("clearAllUsers: Erreur lors de la vérification finale:", verifyError);
+                    resolve(false);
+                  }
+                }, 300); // Petit délai pour assurer que les transactions sont terminées
+              };
+              
+              clearReq2.onerror = (event) => {
+                console.error("clearAllUsers: Erreur lors du nettoyage de USERS:", event);
+                resolve(false);
+              };
+              
+            } catch (error2) {
+              console.error("clearAllUsers: Erreur lors de la création de la transaction USERS:", error2);
+              resolve(false);
+            }
+          };
+          
+          clearReq1.onerror = (event) => {
+            console.error("clearAllUsers: Erreur lors du nettoyage de CURRENT_USER:", event);
+            resolve(false);
+          };
+          
+        } catch (error1) {
+          console.error("clearAllUsers: Erreur lors de la création de la transaction CURRENT_USER:", error1);
+          resolve(false);
         }
-      }
-      
-      passwordKeys.forEach(key => {
-        console.log(`clearAllUsers: Removing localStorage key: ${key}`);
-        localStorage.removeItem(key);
       });
       
-      // 4. Vérifier que tout a été effacé correctement
-      const remainingUsers = await this.getUsers();
-      const currentUser = await this.getCurrentUser();
-      
-      const success = remainingUsers.length === 0 && currentUser === null;
-      console.log(`clearAllUsers: Verification - users cleared: ${remainingUsers.length === 0}, current user cleared: ${currentUser === null}`);
-      
-      if (!success) {
-        console.error("clearAllUsers: Failed to completely clear users data");
-        return false;
-      }
-      
-      console.log("clearAllUsers: Successfully cleared all user data");
-      return true;
-    } catch (error) {
-      console.error("clearAllUsers: Error while clearing user data:", error);
+    } catch (mainError) {
+      console.error("clearAllUsers: Erreur principale:", mainError);
       return false;
     }
   }
