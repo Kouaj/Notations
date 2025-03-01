@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -110,9 +111,8 @@ export default function Login() {
           description: "Vous êtes maintenant connecté"
         });
         
-        // Forcer le rechargement de la page pour réinitialiser l'état de l'application
-        // Cela garantit que tous les composants sont correctement mis à jour avec l'utilisateur connecté
-        window.location.href = '/';
+        // Utiliser le hash pour la redirection (compatible avec GitHub Pages)
+        window.location.href = window.location.origin + window.location.pathname + '#/';
       } else {
         console.log("Login: Mot de passe incorrect");
         console.log("Login: Mot de passe fourni (hashé):", hashedPassword);
