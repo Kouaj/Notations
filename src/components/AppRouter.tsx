@@ -5,6 +5,8 @@ import AppLayout from "@/components/AppLayout";
 import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import { storage } from "@/lib/storage";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 // Configuration optimisée pour wouter avec GitHub Pages
 export const useHashLocation = (): [string, (to: string) => void] => {
@@ -39,6 +41,54 @@ export const useHashLocation = (): [string, (to: string) => void] => {
 
   return [loc, navigate];
 };
+
+// Composant pour réinitialiser les utilisateurs
+function ResetUsersButton() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const handleReset = async () => {
+    try {
+      const success = await storage.clearAllUsers();
+      if (success) {
+        toast({
+          title: "Réinitialisation réussie",
+          description: "Tous les utilisateurs ont été supprimés",
+        });
+        // Rediriger vers la page de connexion
+        setTimeout(() => {
+          window.location.hash = "#/auth/login";
+          window.location.reload(); // Recharger la page pour s'assurer que tout est réinitialisé
+        }, 1000);
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Une erreur s'est produite lors de la réinitialisation",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la réinitialisation des utilisateurs:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive"
+      });
+    }
+  };
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50">
+      <Button 
+        variant="destructive" 
+        onClick={handleReset}
+        size="sm"
+      >
+        Réinitialiser tous les utilisateurs
+      </Button>
+    </div>
+  );
+}
 
 export default function AppRouter() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -79,6 +129,7 @@ export default function AppRouter() {
 
   return (
     <Router hook={useHashLocation}>
+      <ResetUsersButton />
       <Switch>
         <Route path="/auth/login">
           <Login />

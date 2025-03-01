@@ -92,6 +92,7 @@ export default function Register() {
           description: "Cet email est déjà utilisé",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
       
@@ -106,14 +107,15 @@ export default function Register() {
       console.log("Register: Création d'un nouvel utilisateur:", newUser);
       
       // Save user to database
-      await storage.saveUser(newUser);
+      const savedUser = await storage.saveUser(newUser);
+      console.log("Register: Utilisateur sauvegardé:", savedUser);
       
       // For demo purposes only - in real app, NEVER store passwords client-side
       // This is only for demonstration and should be replaced with proper authentication
       localStorage.setItem(`user_${id}_password`, btoa(password));
       
       // Set as current user
-      await storage.setCurrentUser(newUser);
+      await storage.setCurrentUser(savedUser);
       
       console.log("Register: Inscription réussie");
       toast({
@@ -121,7 +123,10 @@ export default function Register() {
         description: "Votre compte a été créé avec succès"
       });
       
-      setLocation('/');
+      // Ajouter un délai pour s'assurer que le currentUser est bien enregistré
+      setTimeout(() => {
+        setLocation('/');
+      }, 500);
     } catch (error) {
       console.error("Registration error:", error);
       toast({

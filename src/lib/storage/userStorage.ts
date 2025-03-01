@@ -16,13 +16,14 @@ export class UserStorage extends BaseStorage {
     }
   }
 
-  async saveUser(user: User): Promise<void> {
+  async saveUser(user: User): Promise<User> {
     try {
       await this.performTransaction(
         STORES.USERS,
         'readwrite',
         store => store.put(user)
       );
+      return user; // Assurons-nous de retourner l'utilisateur créé
     } catch (error) {
       console.error("Error saving user:", error);
       throw error;
