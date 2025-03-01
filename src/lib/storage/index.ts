@@ -1,3 +1,4 @@
+
 import { UserStorage } from './userStorage';
 import { ReseauStorage } from './reseauStorage';
 import { ParcelleStorage } from './parcelleStorage';
@@ -19,7 +20,10 @@ class IndexedDBStorage implements IDBStorage {
 
   async saveUser(user: User) {
     try {
-      return await this.userStorage.saveUser(user);
+      console.log("Storage interface: Saving user", user);
+      const savedUser = await this.userStorage.saveUser(user);
+      console.log("Storage interface: User saved successfully", savedUser);
+      return savedUser;
     } catch (error) {
       console.error("Error in storage interface while saving user:", error);
       throw error;
@@ -32,7 +36,9 @@ class IndexedDBStorage implements IDBStorage {
 
   async getCurrentUser() {
     try {
-      return await this.userStorage.getCurrentUser();
+      const user = await this.userStorage.getCurrentUser();
+      console.log("Storage interface: Current user", user);
+      return user;
     } catch (error) {
       console.error("Error getting current user:", error);
       return null;
@@ -41,7 +47,9 @@ class IndexedDBStorage implements IDBStorage {
 
   async setCurrentUser(user: User | null) {
     try {
-      return await this.userStorage.setCurrentUser(user);
+      console.log("Storage interface: Setting current user", user);
+      await this.userStorage.setCurrentUser(user);
+      console.log("Storage interface: Current user set successfully");
     } catch (error) {
       console.error("Error setting current user:", error);
     }
@@ -49,8 +57,9 @@ class IndexedDBStorage implements IDBStorage {
 
   async clearAllUsers() {
     try {
+      console.log("Storage interface: Clearing all users");
       const result = await this.userStorage.clearAllUsers();
-      console.log("All users cleared from storage interface, result:", result);
+      console.log("Storage interface: All users cleared, result:", result);
       return result;
     } catch (error) {
       console.error("Error clearing all users:", error);

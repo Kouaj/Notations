@@ -49,10 +49,19 @@ function ResetUsersButton() {
   const handleReset = async () => {
     try {
       console.log("Tentative de réinitialisation des utilisateurs...");
+      // Récupérer les utilisateurs avant suppression pour déboguer
+      const usersBefore = await storage.getUsers();
+      console.log("Utilisateurs avant réinitialisation:", usersBefore);
+      
+      // Effacer les utilisateurs
       const success = await storage.clearAllUsers();
       console.log("Résultat de la réinitialisation:", success);
       
-      if (success) {
+      // Vérifier que les utilisateurs ont bien été supprimés
+      const usersAfter = await storage.getUsers();
+      console.log("Utilisateurs après réinitialisation:", usersAfter);
+      
+      if (success && usersAfter.length === 0) {
         toast({
           title: "Réinitialisation réussie",
           description: "Tous les utilisateurs ont été supprimés",
@@ -63,11 +72,11 @@ function ResetUsersButton() {
           console.log("Redirection vers la page de connexion...");
           window.location.hash = "#/auth/login";
           window.location.reload(); // Recharger la page pour s'assurer que tout est réinitialisé
-        }, 1500);
+        }, 2000);
       } else {
         toast({
           title: "Erreur",
-          description: "Une erreur s'est produite lors de la réinitialisation",
+          description: "Une erreur s'est produite lors de la réinitialisation ou pas tous les utilisateurs n'ont pas été supprimés",
           variant: "destructive"
         });
       }

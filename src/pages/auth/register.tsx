@@ -39,9 +39,12 @@ export default function Register() {
     const checkCurrentUser = async () => {
       try {
         const user = await storage.getCurrentUser();
+        console.log("Register: Vérification de l'utilisateur actuel:", user);
         if (user) {
           console.log("Register: Utilisateur déjà connecté, redirection vers /");
           setLocation('/');
+        } else {
+          console.log("Register: Aucun utilisateur connecté, affichage du formulaire d'inscription");
         }
       } catch (error) {
         console.error("Register: Erreur lors de la vérification de l'utilisateur actuel:", error);
@@ -79,10 +82,13 @@ export default function Register() {
 
     setIsLoading(true);
     try {
+      // Vérifier la base de données avant de créer l'utilisateur
+      console.log("Register: Vérification des utilisateurs existants");
+      const dbBeforeUsers = await storage.getUsers();
+      console.log("Register: Utilisateurs en base avant inscription:", dbBeforeUsers);
+      
       // Check if email already exists
       const users = await storage.getUsers();
-      console.log("Register: Utilisateurs récupérés:", users);
-      
       const emailExists = users.some(u => u.email === email);
       
       if (emailExists) {
@@ -106,17 +112,37 @@ export default function Register() {
       
       console.log("Register: Création d'un nouvel utilisateur:", newUser);
       
-      // Save user to database
-      await storage.saveUser(newUser);
-      console.log("Register: Utilisateur sauvegardé");
+      // Save user to database with explicit try/catch for debugging
+      try {
+        console.log("Register: Tentative de sauvegarde de l'utilisateur");
+        const savedUser = await storage.saveUser(newUser);
+        console.log("Register: Utilisateur sauvegardé avec succès:", savedUser);
+      } catch (saveError) {
+        console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
+        throw saveError;
+      }
+      
+      // Vérifier que l'utilisateur a bien été sauvegardé
+      const dbAfterUsers = await storage.getUsers();
+      console.log("Register: Utilisateurs en base après inscription:", dbAfterUsers);
       
       // For demo purposes only - in real app, NEVER store passwords client-side
       // This is only for demonstration and should be replaced with proper authentication
       localStorage.setItem(`user_${id}_password`, btoa(password));
       
       // Set as current user
-      await storage.setCurrentUser(newUser);
-      console.log("Register: Utilisateur défini comme courant");
+      try {
+        console.log("Register: Tentative de définir l'utilisateur courant");
+        await storage.setCurrentUser(newUser);
+        console.log("Register: Utilisateur défini comme courant avec succès");
+      } catch (currentUserError) {
+        console.error("Register: Erreur lors de la définition de l'utilisateur courant:", currentUserError);
+        throw currentUserError;
+      }
+      
+      // Vérifier que l'utilisateur courant a bien été défini
+      const currentUser = await storage.getCurrentUser();
+      console.log("Register: Utilisateur courant après inscription:", currentUser);
       
       console.log("Register: Inscription réussie");
       toast({
@@ -128,12 +154,12 @@ export default function Register() {
       setTimeout(() => {
         console.log("Register: Redirection vers la page d'accueil");
         setLocation('/');
-      }, 1000);
+      }, 1500);
     } catch (error) {
       console.error("Registration error:", error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de l'inscription",
+        description: "Une erreur s'est produite lors de l'inscription. Veuillez réessayer.",
         variant: "destructive"
       });
     } finally {
