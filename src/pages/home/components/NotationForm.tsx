@@ -28,7 +28,7 @@ import { CancelDialog } from "./CancelDialog";
 import { HistoryRecord, NotationType, PartiePlante } from "@/shared/schema";
 
 const formSchema = z.object({
-  parcelId: z.number(),
+  parcelleId: z.number(),
   date: z.string().min(1, {
     message: "La date est obligatoire.",
   }),
@@ -54,7 +54,7 @@ export function NotationForm({ onCancel, parcelleId, onNotationSaved }: Notation
   const form = useForm<FormState>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      parcelId: parcelleId || 0,
+      parcelleId: parcelleId || 0,
       date: new Date().toISOString().split('T')[0],
       type: "maladie" as NotationType,
       partie: "feuilles" as PartiePlante,
@@ -115,7 +115,6 @@ export function NotationForm({ onCancel, parcelleId, onNotationSaved }: Notation
       });
 
       onNotationSaved(newNotation);
-      navigate('/');
 
     } catch (error: any) {
       console.error("Erreur lors de l'enregistrement de la notation:", error);

@@ -52,6 +52,14 @@ export default function Home() {
   }, [toast]);
 
   const handleStartNotation = () => {
+    if (!selectedParcelleId) {
+      toast({
+        title: "Attention",
+        description: "Veuillez d'abord sélectionner une parcelle dans la page Parcelles",
+        variant: "destructive"
+      });
+      return;
+    }
     setShowForm(true);
   };
 
