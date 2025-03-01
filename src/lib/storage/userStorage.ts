@@ -11,7 +11,7 @@ export class UserStorage extends BaseStorage {
         store => store.getAll()
       );
       console.log("Retrieved users:", users);
-      return users;
+      return users || [];
     } catch (error) {
       console.error("Error getting users:", error);
       return [];
@@ -36,17 +36,21 @@ export class UserStorage extends BaseStorage {
         throw new Error("Email already exists");
       }
       
+      // Utilisez put avec la clé explicite pour garantir la sauvegarde
       await this.performTransaction(
         STORES.USERS,
         'readwrite',
-        store => {
-          const request = store.put(user);
-          return request;
-        }
+        store => store.put(user, user.id)
       );
       
-      console.log("User saved successfully:", user);
-      return user;
+      // Vérifier que l'utilisateur a bien été sauvegardé
+      const savedUser = await this.getUserById(user.id);
+      if (!savedUser) {
+        throw new Error("Failed to save user: User not found after save operation");
+      }
+      
+      console.log("User saved successfully:", savedUser);
+      return savedUser;
     } catch (error) {
       console.error("Failed to save user:", error);
       throw error;
@@ -66,7 +70,7 @@ export class UserStorage extends BaseStorage {
         store => store.get(id)
       );
       console.log("getUserById result:", user);
-      return user;
+      return user || null;
     } catch (error) {
       console.error("Error getting user by ID:", error);
       return null;
@@ -81,7 +85,7 @@ export class UserStorage extends BaseStorage {
         store => store.get('current')
       );
       console.log("Current user from database:", user);
-      return user;
+      return user || null;
     } catch (error) {
       console.error("Error getting current user:", error);
       return null;
@@ -94,7 +98,14 @@ export class UserStorage extends BaseStorage {
       await this.performTransaction(
         STORES.CURRENT_USER,
         'readwrite',
-        store => store.put(user, 'current')
+        store => {
+          // Si on efface l'utilisateur actuel
+          if (!user) {
+            return store.clear();
+          }
+          // Sinon on le met à jour
+          return store.put(user, 'current');
+        }
       );
       console.log("Current user set successfully in database");
     } catch (error) {
@@ -107,23 +118,7 @@ export class UserStorage extends BaseStorage {
     try {
       console.log("Starting to clear all users...");
       
-      // Vérifier les données avant effacement
-      const beforeUsers = await this.getUsers();
-      const beforeCurrentUser = await this.getCurrentUser();
-      console.log("Before clearing - users count:", beforeUsers.length);
-      console.log("Before clearing - current user exists:", !!beforeCurrentUser);
-      
-      // Effacer tous les utilisateurs
-      await this.performTransaction(
-        STORES.USERS,
-        'readwrite',
-        store => {
-          console.log("Clearing USERS store...");
-          return store.clear();
-        }
-      );
-      
-      // Effacer l'utilisateur actuel
+      // Effacer l'utilisateur actuel d'abord
       await this.performTransaction(
         STORES.CURRENT_USER,
         'readwrite',
@@ -133,11 +128,31 @@ export class UserStorage extends BaseStorage {
         }
       );
       
+      // Ensuite effacer tous les utilisateurs
+      await this.performTransaction(
+        STORES.USERS,
+        'readwrite',
+        store => {
+          console.log("Clearing USERS store...");
+          return store.clear();
+        }
+      );
+      
       // Vérifier après effacement
       const afterUsers = await this.getUsers();
       const afterCurrentUser = await this.getCurrentUser();
+      
       console.log("After clearing - users count:", afterUsers.length);
       console.log("After clearing - current user exists:", !!afterCurrentUser);
+      
+      // Effacer également les mots de passe stockés dans localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('user_') && key.endsWith('_password')) {
+          console.log("Removing localStorage item:", key);
+          localStorage.removeItem(key);
+        }
+      }
       
       const success = afterUsers.length === 0 && !afterCurrentUser;
       console.log("Clear operation success:", success);

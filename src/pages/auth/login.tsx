@@ -16,7 +16,7 @@ const loginSchema = z.object({
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -66,45 +66,57 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      // Simple password hashing (in production, use a proper hashing library)
-      const hashedPassword = btoa(password);
-      
-      // Get users and check if email exists
+      // Récupérer tous les utilisateurs
       const users = await storage.getUsers();
       console.log("Login: Utilisateurs récupérés:", users);
       
+      // Trouver l'utilisateur par email
       const user = users.find(u => u.email === email);
       
       if (!user) {
         console.log("Login: Utilisateur non trouvé");
+        setErrors({ general: "Email ou mot de passe incorrect" });
         toast({
           title: "Erreur de connexion",
-          description: "Utilisateur non trouvé. Veuillez vous inscrire.",
+          description: "Email ou mot de passe incorrect",
           variant: "destructive"
         });
         return;
       }
       
-      // For demo purposes only - in real app, NEVER store passwords client-side
-      // This is only for demonstration and should be replaced with proper authentication
-      if (hashedPassword === localStorage.getItem(`user_${user.id}_password`)) {
+      // Vérifier le mot de passe
+      const hashedPassword = btoa(password);
+      const storedPassword = localStorage.getItem(`user_${user.id}_password`);
+      console.log("Login: Mot de passe stocké pour l'utilisateur:", !!storedPassword);
+      
+      if (hashedPassword === storedPassword) {
         console.log("Login: Mot de passe correct, connexion réussie");
+        
+        // Définir l'utilisateur actuel
         await storage.setCurrentUser(user);
+        
         toast({
           title: "Connexion réussie",
           description: "Vous êtes maintenant connecté"
         });
-        setLocation('/');
+        
+        // Rediriger avec un délai
+        setTimeout(() => {
+          window.location.hash = "#/";
+          window.location.reload();
+        }, 1000);
       } else {
         console.log("Login: Mot de passe incorrect");
+        setErrors({ general: "Email ou mot de passe incorrect" });
         toast({
           title: "Erreur de connexion",
-          description: "Mot de passe incorrect",
+          description: "Email ou mot de passe incorrect",
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error("Login error:", error);
+      setErrors({ general: "Une erreur s'est produite lors de la connexion" });
       toast({
         title: "Erreur",
         description: "Une erreur s'est produite lors de la connexion",
@@ -119,6 +131,12 @@ export default function Login() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
       <div className="w-full max-w-md px-8 py-10 bg-white rounded-lg shadow-md">
         <h1 className="text-2xl font-bold text-center mb-6 text-purple-800">Connexion</h1>
+        
+        {errors.general && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {errors.general}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

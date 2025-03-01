@@ -115,37 +115,37 @@ export default function Register() {
       
       console.log("Register: Création d'un nouvel utilisateur:", newUser);
       
+      // Pour le débogage, stockez le mot de passe dans localStorage AVANT d'essayer de sauvegarder l'utilisateur
+      localStorage.setItem(`user_${id}_password`, btoa(password));
+      console.log("Register: Mot de passe stocké dans localStorage");
+      
       // Save user to database with explicit try/catch for debugging
-      let savedUser;
       try {
         console.log("Register: Tentative de sauvegarde de l'utilisateur");
-        savedUser = await storage.saveUser(newUser);
+        const savedUser = await storage.saveUser(newUser);
         console.log("Register: Utilisateur sauvegardé avec succès:", savedUser);
       } catch (saveError) {
         console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
         setErrors({ general: "Erreur lors de la sauvegarde de l'utilisateur" });
+        
+        // Nettoyage en cas d'erreur
+        localStorage.removeItem(`user_${id}_password`);
         throw saveError;
       }
       
       // Vérifier que l'utilisateur a bien été sauvegardé
-      const dbAfterUsers = await storage.getUsers();
-      console.log("Register: Utilisateurs en base après inscription:", dbAfterUsers);
-      
-      // Vérifier que l'utilisateur est bien dans la base
-      const userSaved = dbAfterUsers.some(u => u.id === id);
-      if (!userSaved) {
+      const savedUser = await storage.getUserById(id);
+      if (!savedUser) {
         console.error("Register: L'utilisateur n'a pas été sauvegardé correctement");
+        localStorage.removeItem(`user_${id}_password`);
         setErrors({ general: "L'utilisateur n'a pas été sauvegardé correctement" });
         throw new Error("L'utilisateur n'a pas été sauvegardé correctement");
       }
       
-      // For demo purposes only - in real app, NEVER store passwords client-side
-      localStorage.setItem(`user_${id}_password`, btoa(password));
-      
       // Set as current user
       try {
         console.log("Register: Tentative de définir l'utilisateur courant");
-        await storage.setCurrentUser(newUser);
+        await storage.setCurrentUser(savedUser);
         console.log("Register: Utilisateur défini comme courant avec succès");
       } catch (currentUserError) {
         console.error("Register: Erreur lors de la définition de l'utilisateur courant:", currentUserError);
@@ -156,12 +156,6 @@ export default function Register() {
       const currentUser = await storage.getCurrentUser();
       console.log("Register: Utilisateur courant après inscription:", currentUser);
       
-      if (!currentUser) {
-        console.error("Register: L'utilisateur courant n'a pas été défini correctement");
-        throw new Error("L'utilisateur courant n'a pas été défini correctement");
-      }
-      
-      console.log("Register: Inscription réussie");
       toast({
         title: "Inscription réussie",
         description: "Votre compte a été créé avec succès. Redirection en cours..."
@@ -170,7 +164,8 @@ export default function Register() {
       // Redirection avec un délai pour s'assurer que tout est enregistré
       setTimeout(() => {
         console.log("Register: Redirection vers la page d'accueil");
-        setLocation('/');
+        window.location.hash = "#/";
+        window.location.reload();
       }, 1500);
     } catch (error) {
       console.error("Register: Erreur lors de l'inscription:", error);

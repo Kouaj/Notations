@@ -7,6 +7,17 @@ import Register from "@/pages/auth/register";
 import { storage } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Configuration optimisée pour wouter avec GitHub Pages
 export const useHashLocation = (): [string, (to: string) => void] => {
@@ -46,6 +57,7 @@ export const useHashLocation = (): [string, (to: string) => void] => {
 function ResetUsersButton() {
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   
   const handleReset = async () => {
     if (isResetting) return; // Éviter les clics multiples
@@ -69,18 +81,15 @@ function ResetUsersButton() {
       if (success && usersAfter.length === 0) {
         toast({
           title: "Réinitialisation réussie",
-          description: "Tous les utilisateurs ont été supprimés. Redirection en cours..."
+          description: "Tous les utilisateurs ont été supprimés. Redirection en cours...",
+          variant: "success"
         });
         
-        // Nettoyer tout le localStorage également
-        localStorage.clear();
-        
-        // Attendre un peu avant de rediriger
+        // Forcer un rechargement complet pour s'assurer que tout est nettoyé
         setTimeout(() => {
           console.log("Redirection vers la page de connexion...");
           window.location.hash = "#/auth/login";
-          // Force reload pour s'assurer que tout est nettoyé
-          setTimeout(() => window.location.reload(), 100);
+          window.location.reload();
         }, 1500);
       } else {
         console.error("La réinitialisation n'a pas fonctionné comme prévu");
@@ -99,19 +108,41 @@ function ResetUsersButton() {
       });
     } finally {
       setIsResetting(false);
+      setIsOpen(false);
     }
   };
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <Button 
-        variant="destructive" 
-        onClick={handleReset}
-        size="sm"
-        disabled={isResetting}
-      >
-        {isResetting ? "Réinitialisation..." : "Réinitialiser tous les utilisateurs"}
-      </Button>
+      <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+        <AlertDialogTrigger asChild>
+          <Button 
+            variant="destructive" 
+            size="sm"
+            disabled={isResetting}
+          >
+            Réinitialiser tous les utilisateurs
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Réinitialiser tous les utilisateurs</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action va supprimer tous les utilisateurs et effacer les données de connexion.
+              Cette opération est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReset}
+              disabled={isResetting}
+            >
+              {isResetting ? "Réinitialisation..." : "Confirmer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
