@@ -118,59 +118,49 @@ export class UserStorage extends BaseStorage {
     try {
       console.log("Starting to clear all users...");
       
-      // Cette fonction sera utilisée pour vider un store
-      const clearStore = async (storeName: string) => {
-        return new Promise<void>((resolve, reject) => {
-          const request = indexedDB.open(DB_NAME, DB_VERSION);
-          
-          request.onerror = (event) => {
-            console.error(`Error opening database to clear ${storeName}:`, event);
-            reject(new Error(`Failed to open database for clearing ${storeName}`));
-          };
-          
-          request.onsuccess = (event) => {
-            const db = request.result;
-            try {
-              const transaction = db.transaction(storeName, 'readwrite');
-              const store = transaction.objectStore(storeName);
-              
-              const clearRequest = store.clear();
-              
-              clearRequest.onsuccess = () => {
-                console.log(`Successfully cleared ${storeName} store`);
-                resolve();
-              };
-              
-              clearRequest.onerror = (evt) => {
-                console.error(`Error clearing ${storeName}:`, evt);
-                reject(new Error(`Failed to clear ${storeName}`));
-              };
-              
-              transaction.oncomplete = () => {
-                db.close();
-              };
-            } catch (error) {
-              console.error(`Transaction error clearing ${storeName}:`, error);
-              db.close();
-              reject(error);
-            }
-          };
-        });
-      };
+      // Utiliser les transactions de BaseStorage pour vider les stores
+      try {
+        await this.performTransaction(
+          STORES.CURRENT_USER,
+          'readwrite',
+          store => {
+            console.log("Clearing CURRENT_USER store");
+            return store.clear();
+          }
+        );
+        console.log("Successfully cleared CURRENT_USER store");
+      } catch (error) {
+        console.error("Error clearing CURRENT_USER store:", error);
+      }
       
-      // Nettoyer un par un chaque store
-      await clearStore(STORES.CURRENT_USER);
-      await clearStore(STORES.USERS);
+      try {
+        await this.performTransaction(
+          STORES.USERS,
+          'readwrite',
+          store => {
+            console.log("Clearing USERS store");
+            return store.clear();
+          }
+        );
+        console.log("Successfully cleared USERS store");
+      } catch (error) {
+        console.error("Error clearing USERS store:", error);
+      }
       
       // Effacer également les mots de passe stockés dans localStorage
+      const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('user_') && key.endsWith('_password')) {
-          console.log("Removing localStorage item:", key);
-          localStorage.removeItem(key);
-          i--; // Ajuster l'index car nous venons de supprimer un élément
+          keysToRemove.push(key);
         }
       }
+      
+      // Supprimer les clés collectées (pour éviter les problèmes d'index lors de la suppression)
+      keysToRemove.forEach(key => {
+        console.log("Removing localStorage item:", key);
+        localStorage.removeItem(key);
+      });
       
       // Vérifier après effacement
       const users = await this.getUsers();
