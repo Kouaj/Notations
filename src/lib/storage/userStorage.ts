@@ -1,4 +1,3 @@
-
 import { User } from '@/shared/schema';
 import { BaseStorage, STORES, DB_NAME, DB_VERSION } from './core';
 
@@ -50,6 +49,10 @@ export class UserStorage extends BaseStorage {
       }
       
       console.log("User saved successfully:", savedUser);
+      
+      // Stocker également dans localStorage pour persistance lors des actualisations
+      localStorage.setItem('current_user', JSON.stringify(user));
+      
       return savedUser;
     } catch (error) {
       console.error("Failed to save user:", error);
@@ -79,37 +82,73 @@ export class UserStorage extends BaseStorage {
 
   async getCurrentUser(): Promise<User | null> {
     try {
-      const user = await this.performTransaction(
+      // D'abord, essayer de récupérer depuis IndexedDB
+      let user = await this.performTransaction(
         STORES.CURRENT_USER,
         'readonly',
         store => store.get('current')
       );
-      console.log("Current user from database:", user);
+      
+      // Si aucun utilisateur n'est trouvé, essayer localStorage comme solution de secours
+      if (!user) {
+        const storedUser = localStorage.getItem('current_user');
+        if (storedUser) {
+          user = JSON.parse(storedUser);
+          // Synchroniser avec IndexedDB
+          await this.setCurrentUser(user);
+        }
+      }
+      
+      console.log("Current user:", user);
       return user || null;
     } catch (error) {
       console.error("Error getting current user:", error);
+      
+      // En cas d'erreur, essayer le localStorage comme solution de secours
+      try {
+        const storedUser = localStorage.getItem('current_user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          return user;
+        }
+      } catch (e) {
+        console.error("Fallback also failed:", e);
+      }
+      
       return null;
     }
   }
 
   async setCurrentUser(user: User | null): Promise<void> {
     try {
-      console.log("Setting current user in database:", user);
+      console.log("Setting current user:", user);
+      
+      // Mettre à jour IndexedDB
       await this.performTransaction(
         STORES.CURRENT_USER,
         'readwrite',
         store => {
           // Si on efface l'utilisateur actuel
           if (!user) {
+            localStorage.removeItem('current_user');
             return store.clear();
           }
           // Sinon on le met à jour
+          localStorage.setItem('current_user', JSON.stringify(user));
           return store.put(user, 'current');
         }
       );
-      console.log("Current user set successfully in database");
+      console.log("Current user set successfully");
     } catch (error) {
       console.error("Error setting current user:", error);
+      
+      // Toujours maintenir localStorage à jour, même en cas d'erreur avec IndexedDB
+      if (user) {
+        localStorage.setItem('current_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('current_user');
+      }
+      
       throw error;
     }
   }
@@ -193,7 +232,7 @@ export class UserStorage extends BaseStorage {
             })
             .catch((error) => {
               console.error("❌ Erreur lors de la recréation de la base de données:", error);
-              // Si nous obtenons une erreur de version ici, nous devrons recharger la page
+              // Si nous obtenons une erreur de version ici, nous devons recharger la page
               if (error && (error.name === "VersionError" || error.message?.includes("version"))) {
                 console.warn("⚠️ Erreur de version détectée, rechargement de la page...");
                 window.location.reload();

@@ -25,12 +25,47 @@ export default function AppLayout() {
     const fetchUser = async () => {
       try {
         console.log("AppLayout: Récupération de l'utilisateur actuel");
+        
+        // Récupérer l'utilisateur depuis le stockage
         const user = await storage.getCurrentUser();
         console.log("AppLayout: Utilisateur actuel:", user);
-        setCurrentUser(user);
+        
+        if (user) {
+          setCurrentUser(user);
+        } else {
+          console.log("AppLayout: Aucun utilisateur trouvé, vérification du localStorage");
+          
+          // Vérifier le localStorage comme solution de secours
+          const storedUser = localStorage.getItem('current_user');
+          if (storedUser) {
+            try {
+              const parsedUser = JSON.parse(storedUser);
+              console.log("AppLayout: Utilisateur trouvé dans localStorage:", parsedUser);
+              
+              // Synchroniser avec IndexedDB
+              await storage.setCurrentUser(parsedUser);
+              setCurrentUser(parsedUser);
+            } catch (e) {
+              console.error("AppLayout: Erreur lors de l'analyse du JSON:", e);
+            }
+          }
+        }
+        
         setIsLoading(false);
       } catch (error) {
         console.error("AppLayout: Erreur lors de la récupération de l'utilisateur:", error);
+        
+        // Vérifier le localStorage comme solution de secours
+        const storedUser = localStorage.getItem('current_user');
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setCurrentUser(parsedUser);
+          } catch (e) {
+            console.error("AppLayout: Erreur lors de l'analyse du JSON:", e);
+          }
+        }
+        
         setIsLoading(false);
       }
     };
@@ -79,7 +114,7 @@ export default function AppLayout() {
         </Switch>
       </main>
       
-      {!isAuthRoute && <Navigation />}
+      {!isAuthRoute && currentUser && <Navigation />}
     </div>
   );
 }

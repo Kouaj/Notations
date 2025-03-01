@@ -28,7 +28,9 @@ export default function Login() {
         const user = await storage.getCurrentUser();
         if (user) {
           console.log("Login: Utilisateur déjà connecté, redirection vers /");
-          setLocation('/');
+          
+          // Si l'utilisateur est déjà connecté, rediriger vers la page d'accueil
+          window.location.href = window.location.origin + window.location.pathname + '#/';
         }
       } catch (error) {
         console.error("Login: Erreur lors de la vérification de l'utilisateur actuel:", error);
@@ -73,7 +75,7 @@ export default function Login() {
       console.log("Login: Utilisateurs récupérés:", users.length);
       console.log("Login: Liste des utilisateurs:", JSON.stringify(users, null, 2));
       
-      // Trouver l'utilisateur par email
+      // Trouver l'utilisateur par email (insensible à la casse)
       const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (!user) {
@@ -112,7 +114,13 @@ export default function Login() {
         });
         
         // Utiliser le hash pour la redirection (compatible avec GitHub Pages)
+        // Forcer un rechargement complet pour s'assurer que tout l'état est correctement initialisé
         window.location.href = window.location.origin + window.location.pathname + '#/';
+        
+        // Attendre un court instant avant de recharger pour permettre aux toasts de s'afficher
+        setTimeout(() => {
+          console.log("Login: Redirection vers la page d'accueil...");
+        }, 1000);
       } else {
         console.log("Login: Mot de passe incorrect");
         console.log("Login: Mot de passe fourni (hashé):", hashedPassword);

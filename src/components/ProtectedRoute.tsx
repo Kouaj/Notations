@@ -15,22 +15,33 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
     const checkAuth = async () => {
       try {
         console.log("ProtectedRoute: Vérification de l'authentification...");
+        
+        // Vérifier dans IndexedDB et localStorage
         const user = await storage.getCurrentUser();
         console.log("ProtectedRoute: Résultat de la vérification:", user);
         
         if (!user) {
           console.log("ProtectedRoute: Aucun utilisateur trouvé, redirection vers la connexion");
           setIsAuthenticated(false);
-          // Utiliser le bon format pour la redirection avec le hash
-          setLocation('/auth/login');
+          
+          // Utiliser le format de redirection compatible avec le hash
+          window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
         } else {
           console.log("ProtectedRoute: Utilisateur authentifié:", user.name);
           setIsAuthenticated(true);
         }
       } catch (error) {
         console.error("ProtectedRoute: Erreur lors de la vérification de l'authentification:", error);
-        setIsAuthenticated(false);
-        setLocation('/auth/login');
+        
+        // Vérifier le localStorage comme solution de secours
+        const storedUser = localStorage.getItem('current_user');
+        if (storedUser) {
+          console.log("ProtectedRoute: Utilisateur trouvé dans localStorage");
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+          window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
+        }
       }
     };
     
