@@ -1,3 +1,4 @@
+
 import { User, Reseau, Parcelle, HistoryRecord } from "@/shared/schema";
 import { openDB, DBSchema } from 'idb';
 
@@ -28,6 +29,10 @@ interface MyDatabase extends DBSchema {
   selectedParcelle: {
     key: string;
     value: Parcelle;
+  };
+  currentUser: {
+    key: string;
+    value: User;
   };
 }
 
@@ -71,6 +76,11 @@ async function initializeDatabase() {
       if (!db.objectStoreNames.contains('selectedParcelle')) {
         const selectedParcelleStore = db.createObjectStore('selectedParcelle', { keyPath: 'id' });
       }
+      
+      // Current User store
+      if (!db.objectStoreNames.contains('currentUser')) {
+        db.createObjectStore('currentUser', { keyPath: 'id' });
+      }
     }
   });
 }
@@ -82,15 +92,29 @@ export const storage = {
   saveUser: async (user: User) => {
     const db = await dbPromise;
     await db.put('users', user);
+    // Also set as current user
+    await db.put('currentUser', user);
+  },
+  getUsers: async (): Promise<User[]> => {
+    const db = await dbPromise;
+    return await db.getAll('users');
   },
   getCurrentUser: async (): Promise<User | undefined> => {
     const db = await dbPromise;
-    const users = await db.getAll('users');
-    return users[0]; // Assuming only one user is logged in at a time
+    const users = await db.getAll('currentUser');
+    return users[0];
+  },
+  setCurrentUser: async (user: User | null) => {
+    const db = await dbPromise;
+    if (user) {
+      await db.put('currentUser', user);
+    } else {
+      await db.clear('currentUser');
+    }
   },
   clearCurrentUser: async () => {
     const db = await dbPromise;
-    await db.clear('users');
+    await db.clear('currentUser');
   },
   saveReseau: async (reseau: Reseau) => {
     const db = await dbPromise;
@@ -99,7 +123,7 @@ export const storage = {
   getReseaux: async (userId?: string): Promise<Reseau[]> => {
     const db = await dbPromise;
     if (userId) {
-      const reseaux = await db.getAll('reseaux', IDBKeyRange.only(userId), 'by-user');
+      const reseaux = await db.getAllFromIndex('reseaux', 'by-user', userId);
       return reseaux;
     } else {
       return await db.getAll('reseaux');
@@ -116,10 +140,10 @@ export const storage = {
   getParcelles: async (reseauId?: number, userId?: string): Promise<Parcelle[]> => {
     const db = await dbPromise;
     if (reseauId) {
-      const parcelles = await db.getAll('parcelles', IDBKeyRange.only(reseauId), 'by-reseau');
+      const parcelles = await db.getAllFromIndex('parcelles', 'by-reseau', reseauId);
       return parcelles;
     } else if (userId) {
-      const parcelles = await db.getAll('parcelles', IDBKeyRange.only(userId), 'by-user');
+      const parcelles = await db.getAllFromIndex('parcelles', 'by-user', userId);
       return parcelles;
     }
     else {
@@ -134,13 +158,13 @@ export const storage = {
     const db = await dbPromise;
     await db.put('history', record);
   },
-   getHistory: async (parcelleId?: number, userId?: string): Promise<HistoryRecord[]> => {
+  getHistory: async (parcelleId?: number, userId?: string): Promise<HistoryRecord[]> => {
     const db = await dbPromise;
     if (parcelleId) {
-      const history = await db.getAll('history', IDBKeyRange.only(parcelleId), 'by-parcelle');
+      const history = await db.getAllFromIndex('history', 'by-parcelle', parcelleId);
       return history;
     } else if (userId) {
-      const history = await db.getAll('history', IDBKeyRange.only(userId), 'by-user');
+      const history = await db.getAllFromIndex('history', 'by-user', userId);
       return history;
     }
     else {

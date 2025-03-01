@@ -73,7 +73,7 @@ export default function Login() {
       // For demo purposes only - in real app, NEVER store passwords client-side
       // This is only for demonstration and should be replaced with proper authentication
       if (hashedPassword === localStorage.getItem(`user_${user.id}_password`)) {
-        await storage.setCurrentUser(user);
+        await storage.saveUser(user); // This will also set as current user
         toast({
           title: "Connexion réussie",
           description: "Vous êtes maintenant connecté"

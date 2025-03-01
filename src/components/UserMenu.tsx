@@ -24,7 +24,7 @@ export default function UserMenu() {
     const fetchUser = async () => {
       try {
         const currentUser = await storage.getCurrentUser();
-        setUser(currentUser);
+        setUser(currentUser || null);
       } catch (error) {
         console.error("Error fetching user:", error);
       } finally {
@@ -37,7 +37,7 @@ export default function UserMenu() {
 
   const handleLogout = async () => {
     try {
-      await storage.setCurrentUser(null);
+      await storage.clearCurrentUser();
       await storage.setSelectedParcelle(null);
       await storage.setSelectedReseau(null);
       

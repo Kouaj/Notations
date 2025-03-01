@@ -88,15 +88,12 @@ export default function Register() {
         name
       };
       
-      // Save user to database
+      // Save user to database - this will also set as current user
       await storage.saveUser(newUser);
       
       // For demo purposes only - in real app, NEVER store passwords client-side
       // This is only for demonstration and should be replaced with proper authentication
       localStorage.setItem(`user_${id}_password`, btoa(password));
-      
-      // Set as current user
-      await storage.setCurrentUser(newUser);
       
       toast({
         title: "Inscription réussie",
