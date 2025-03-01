@@ -50,9 +50,4 @@ export class UserStorage extends BaseStorage {
       store => store.delete(id)
     );
   }
-
-  async isAdmin(user: User | null): Promise<boolean> {
-    if (!user) return false;
-    return user.email === 'mathieu.peraud@gmail.com';
-  }
 }

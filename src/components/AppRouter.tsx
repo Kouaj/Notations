@@ -9,7 +9,6 @@ import LoginPage from "@/pages/auth/login";
 import RegisterPage from "@/pages/auth/register";
 import NotFound from "@/pages/not-found";
 import ProtectedRoute from "./ProtectedRoute";
-import Admin from "@/pages/admin";
 
 export function AppRouter() {
   return (
@@ -25,9 +24,6 @@ export function AppRouter() {
       </Route>
       <Route path="/history">
         <ProtectedRoute component={History} />
-      </Route>
-      <Route path="/admin">
-        <ProtectedRoute component={Admin} />
       </Route>
       <Route path="/auth/login" component={LoginPage} />
       <Route path="/auth/register" component={RegisterPage} />

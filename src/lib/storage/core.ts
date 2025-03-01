@@ -9,8 +9,7 @@ export const STORES = {
   HISTORY: 'history',
   SELECTED_PARCELLE: 'selectedParcelle',
   SELECTED_RESEAU: 'selectedReseau',
-  CURRENT_USER: 'currentUser',
-  SYSTEM_LOGS: 'systemLogs'
+  CURRENT_USER: 'currentUser'
 } as const;
 
 // Base storage handler class
@@ -63,12 +62,6 @@ export class BaseStorage {
 
         if (!db.objectStoreNames.contains(STORES.CURRENT_USER)) {
           db.createObjectStore(STORES.CURRENT_USER);
-        }
-
-        if (!db.objectStoreNames.contains(STORES.SYSTEM_LOGS)) {
-          const logStore = db.createObjectStore(STORES.SYSTEM_LOGS, { keyPath: 'id', autoIncrement: true });
-          logStore.createIndex('userId', 'userId', { unique: false });
-          logStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
       };
     });

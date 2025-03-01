@@ -1,6 +1,5 @@
 
 import { Parcelle, Reseau, HistoryRecord, User } from '@/shared/schema';
-import { SystemLog } from './historyStorage';
 
 // Storage interface for IndexedDB operations
 export interface IDBStorage {
@@ -11,7 +10,6 @@ export interface IDBStorage {
   getCurrentUser(): Promise<User | null>;
   setCurrentUser(user: User | null): Promise<void>;
   deleteUser(id: string): Promise<void>;
-  isAdmin(user: User | null): Promise<boolean>;
   
   // Réseaux
   getReseaux(): Promise<Reseau[]>;
@@ -37,8 +35,4 @@ export interface IDBStorage {
   getHistoryByUser(userId: string): Promise<HistoryRecord[]>;
   saveHistory(record: HistoryRecord): Promise<void>;
   deleteHistory(id: number): Promise<void>;
-  
-  // Logs système
-  getSystemLogs(): Promise<SystemLog[]>;
-  addSystemLog(log: SystemLog): Promise<void>;
 }

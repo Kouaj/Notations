@@ -1,15 +1,6 @@
 
-// Use the imports from the original file
 import { HistoryRecord } from '@/shared/schema';
 import { BaseStorage, STORES } from './core';
-
-export interface SystemLog {
-  id: number;
-  action: string;
-  details: string;
-  userId: string;
-  timestamp: number;
-}
 
 export class HistoryStorage extends BaseStorage {
   async getHistory(): Promise<HistoryRecord[]> {
@@ -38,22 +29,6 @@ export class HistoryStorage extends BaseStorage {
       STORES.HISTORY,
       'readwrite',
       store => store.delete(id)
-    );
-  }
-
-  async getSystemLogs(): Promise<SystemLog[]> {
-    return this.performTransaction(
-      STORES.SYSTEM_LOGS,
-      'readonly',
-      store => store.getAll()
-    );
-  }
-
-  async addSystemLog(log: SystemLog): Promise<void> {
-    await this.performTransaction(
-      STORES.SYSTEM_LOGS,
-      'readwrite',
-      store => store.put(log)
     );
   }
 }
