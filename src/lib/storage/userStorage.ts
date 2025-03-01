@@ -1,3 +1,4 @@
+
 import { User } from '@/shared/schema';
 import { BaseStorage, STORES, DB_NAME, DB_VERSION } from './core';
 
@@ -35,7 +36,7 @@ export class UserStorage extends BaseStorage {
         throw new Error("Email already exists");
       }
       
-      // Utilisons la méthode add pour un nouvel utilisateur
+      // Utilisons la méthode put pour tous les cas (nouveau ou mise à jour)
       await this.performTransaction(
         STORES.USERS,
         'readwrite',
@@ -132,11 +133,11 @@ export class UserStorage extends BaseStorage {
         
         deleteRequest.onerror = (event) => {
           console.error("❌ Erreur lors de la suppression de la base de données:", event);
-          // Check if this is a version error
+          // Vérifier si c'est une erreur de version
           const error = (event.target as IDBOpenDBRequest).error;
           if (error && error.name === "VersionError") {
             console.warn("⚠️ Erreur de version détectée, essai de récupération...");
-            // Try to recover by forcing a page reload
+            // Tentative de récupération en forçant un rechargement de la page
             window.location.reload();
             return;
           }
@@ -170,7 +171,7 @@ export class UserStorage extends BaseStorage {
             })
             .catch((error) => {
               console.error("❌ Erreur lors de la recréation de la base de données:", error);
-              // If we get a version error here, we'll need to reload the page
+              // Si nous obtenons une erreur de version ici, nous devrons recharger la page
               if (error && error.name === "VersionError") {
                 console.warn("⚠️ Erreur de version détectée, rechargement de la page...");
                 window.location.reload();
