@@ -10,6 +10,26 @@
     <meta name="author" content="Lovable" />
     <meta property="og:image" content="./og-image.png" />
     <base href="./" />
+    <script type="text/javascript">
+      // Rediriger correctement vers le hash pour SPA sur GitHub Pages
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect != location.href) {
+          console.log("Redirection depuis sessionStorage:", redirect);
+          
+          // Extraire le chemin pour le transformer en hash
+          var url = new URL(redirect);
+          var path = url.pathname.slice(1); // Enlever le premier slash
+          
+          // Mettre à jour le hash
+          if (path) {
+            history.replaceState(null, null, '#/' + path);
+            console.log("Hash mis à jour:", '#/' + path);
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

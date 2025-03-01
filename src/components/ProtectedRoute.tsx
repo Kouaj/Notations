@@ -14,20 +14,20 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log("Vérification de l'authentification...");
+        console.log("ProtectedRoute: Vérification de l'authentification...");
         const user = await storage.getCurrentUser();
-        console.log("Résultat de la vérification d'authentification:", user);
+        console.log("ProtectedRoute: Résultat de la vérification:", user);
         
         if (!user) {
-          console.log("Aucun utilisateur trouvé, redirection vers la connexion");
+          console.log("ProtectedRoute: Aucun utilisateur trouvé, redirection vers la connexion");
           setIsAuthenticated(false);
           setLocation('/auth/login');
         } else {
-          console.log("Utilisateur authentifié:", user.name);
+          console.log("ProtectedRoute: Utilisateur authentifié:", user.name);
           setIsAuthenticated(true);
         }
       } catch (error) {
-        console.error("Erreur lors de la vérification de l'authentification:", error);
+        console.error("ProtectedRoute: Erreur lors de la vérification de l'authentification:", error);
         setIsAuthenticated(false);
         setLocation('/auth/login');
       }
@@ -36,14 +36,23 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
     checkAuth();
   }, [setLocation]);
 
-  // Afficher un état de chargement
+  // Afficher un état de chargement avec animation
   if (isAuthenticated === null) {
-    return <div className="flex justify-center items-center h-screen">Chargement...</div>;
+    return (
+      <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-b from-purple-50 to-white">
+        <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-purple-800 font-medium">Vérification de l'authentification...</p>
+      </div>
+    );
   }
 
   // Laisser la redirection se produire
   if (isAuthenticated === false) {
-    return null;
+    return (
+      <div className="flex justify-center items-center h-screen bg-gradient-to-b from-purple-50 to-white">
+        <p className="text-purple-800">Redirection vers la page de connexion...</p>
+      </div>
+    );
   }
 
   // Rendre le composant uniquement si authentifié

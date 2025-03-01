@@ -38,9 +38,14 @@ export default function AppLayout() {
     fetchUser();
   }, []);
   
-  // Si toujours en chargement, afficher l'indicateur de chargement
+  // Si toujours en chargement, afficher l'indicateur de chargement avec animation
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Chargement de l'application...</div>;
+    return (
+      <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-b from-purple-50 to-white">
+        <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-purple-800 font-medium">Chargement de l'application...</p>
+      </div>
+    );
   }
   
   return (

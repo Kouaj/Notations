@@ -8,19 +8,27 @@
       // Single Page Apps for GitHub Pages
       // MIT License
       // https://github.com/rafgraph/spa-github-pages
-      var pathSegmentsToKeep = 0;
-
       var l = window.location;
+      
+      // Debug information
+      console.log("404.html - URL:", l.href);
+      console.log("404.html - Path:", l.pathname);
+      
+      // Rediriger vers la racine avec le chemin actuel dans le hash
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        '/' +
+        '?/' +
+        l.pathname.slice(1) +
         (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
         l.hash
       );
     </script>
   </head>
   <body>
-    <h2>Redirection...</h2>
+    <div style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+      <h1>Redirection...</h1>
+      <p>Si vous n'êtes pas automatiquement redirigé, <a href="/">cliquez ici</a> pour retourner à la page d'accueil.</p>
+    </div>
   </body>
 </html>
