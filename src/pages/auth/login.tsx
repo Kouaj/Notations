@@ -17,14 +17,21 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    console.log("Login: Page de connexion chargée");
     const checkCurrentUser = async () => {
-      const user = await storage.getCurrentUser();
-      if (user) {
-        setLocation('/');
+      try {
+        const user = await storage.getCurrentUser();
+        if (user) {
+          console.log("Login: Utilisateur déjà connecté, redirection vers /");
+          setLocation('/');
+        }
+      } catch (error) {
+        console.error("Login: Erreur lors de la vérification de l'utilisateur actuel:", error);
       }
     };
     checkCurrentUser();
@@ -50,18 +57,26 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Login: Tentative de connexion avec email:", email);
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log("Login: Validation du formulaire échouée");
+      return;
+    }
 
+    setIsLoading(true);
     try {
       // Simple password hashing (in production, use a proper hashing library)
       const hashedPassword = btoa(password);
       
       // Get users and check if email exists
       const users = await storage.getUsers();
+      console.log("Login: Utilisateurs récupérés:", users);
+      
       const user = users.find(u => u.email === email);
       
       if (!user) {
+        console.log("Login: Utilisateur non trouvé");
         toast({
           title: "Erreur de connexion",
           description: "Utilisateur non trouvé. Veuillez vous inscrire.",
@@ -73,6 +88,7 @@ export default function Login() {
       // For demo purposes only - in real app, NEVER store passwords client-side
       // This is only for demonstration and should be replaced with proper authentication
       if (hashedPassword === localStorage.getItem(`user_${user.id}_password`)) {
+        console.log("Login: Mot de passe correct, connexion réussie");
         await storage.setCurrentUser(user);
         toast({
           title: "Connexion réussie",
@@ -80,6 +96,7 @@ export default function Login() {
         });
         setLocation('/');
       } else {
+        console.log("Login: Mot de passe incorrect");
         toast({
           title: "Erreur de connexion",
           description: "Mot de passe incorrect",
@@ -93,17 +110,19 @@ export default function Login() {
         description: "Une erreur s'est produite lors de la connexion",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
       <div className="w-full max-w-md px-8 py-10 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-6">Connexion</h1>
+        <h1 className="text-2xl font-bold text-center mb-6 text-purple-800">Connexion</h1>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
             <Input
               id="email"
               type="email"
@@ -116,7 +135,7 @@ export default function Login() {
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">Mot de passe</label>
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe</label>
             <Input
               id="password"
               type="password"
@@ -127,7 +146,13 @@ export default function Login() {
             {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
           </div>
           
-          <Button type="submit" className="w-full">Se connecter</Button>
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isLoading}
+          >
+            {isLoading ? "Connexion en cours..." : "Se connecter"}
+          </Button>
         </form>
         
         <div className="mt-4 text-center">

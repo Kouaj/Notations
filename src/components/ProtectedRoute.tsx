@@ -21,6 +21,7 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
         if (!user) {
           console.log("ProtectedRoute: Aucun utilisateur trouvé, redirection vers la connexion");
           setIsAuthenticated(false);
+          // Utiliser le bon format pour la redirection avec le hash
           setLocation('/auth/login');
         } else {
           console.log("ProtectedRoute: Utilisateur authentifié:", user.name);

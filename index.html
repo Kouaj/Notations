@@ -8,25 +8,44 @@
     <meta name="theme-color" content="#7c3aed" />
     <title>Notations Viticoles</title>
     <script type="text/javascript">
+      console.log("Chargement initial - URL:", window.location.href);
+      
       // Single Page Apps for GitHub Pages
       // MIT License
       // https://github.com/rafgraph/spa-github-pages
       (function(l) {
+        console.log("Script SPA GitHub Pages - URL initial:", l.href);
         if (l.search[1] === '/' ) {
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
+          console.log("Redirection détectée - nouveau chemin:", l.pathname.slice(0, -1) + decoded + l.hash);
           window.history.replaceState(null, null,
               l.pathname.slice(0, -1) + decoded + l.hash
           );
         }
       }(window.location))
-    </script>
-    <!-- Script de débogage pour afficher les informations de navigation -->
-    <script type="text/javascript">
-      console.log("URL chargée:", window.location.href);
-      console.log("Chemin:", window.location.pathname);
-      console.log("Hash:", window.location.hash);
+      
+      // Assurer qu'il y a un hash pour le routage basé sur le hash
+      if (!window.location.hash) {
+        console.log("Aucun hash détecté, définition du hash par défaut #/");
+        window.location.hash = "#/";
+      }
+      
+      // Vérifier les données de stockage local
+      console.log("LocalStorage disponible:", typeof localStorage !== 'undefined');
+      if (typeof localStorage !== 'undefined') {
+        try {
+          const keys = Object.keys(localStorage);
+          console.log("Clés LocalStorage:", keys);
+          
+          // Chercher les utilisateurs stockés
+          const userKeys = keys.filter(k => k.includes('user_'));
+          console.log("Clés d'utilisateurs trouvées:", userKeys);
+        } catch (e) {
+          console.error("Erreur lors de la lecture du localStorage:", e);
+        }
+      }
     </script>
   </head>
   <body>

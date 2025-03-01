@@ -7,7 +7,7 @@ import Register from "@/pages/auth/register";
 import { storage } from "@/lib/storage";
 
 // Configuration optimisée pour wouter avec GitHub Pages
-export const useHashLocation = () => {
+export const useHashLocation = (): [string, (to: string) => void] => {
   const [loc, setLoc] = useState(() => {
     // Initialiser avec le hash actuel ou la route par défaut
     return window.location.hash.slice(1) || "/";
@@ -32,7 +32,7 @@ export const useHashLocation = () => {
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
-  const navigate = (to) => {
+  const navigate = (to: string) => {
     console.log("Navigation vers:", to);
     window.location.hash = to;
   };

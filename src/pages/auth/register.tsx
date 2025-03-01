@@ -23,6 +23,7 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
@@ -34,10 +35,16 @@ export default function Register() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    console.log("Register: Page d'inscription chargée");
     const checkCurrentUser = async () => {
-      const user = await storage.getCurrentUser();
-      if (user) {
-        setLocation('/');
+      try {
+        const user = await storage.getCurrentUser();
+        if (user) {
+          console.log("Register: Utilisateur déjà connecté, redirection vers /");
+          setLocation('/');
+        }
+      } catch (error) {
+        console.error("Register: Erreur lors de la vérification de l'utilisateur actuel:", error);
       }
     };
     checkCurrentUser();
@@ -63,15 +70,23 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Register: Tentative d'inscription avec email:", email);
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log("Register: Validation du formulaire échouée");
+      return;
+    }
 
+    setIsLoading(true);
     try {
       // Check if email already exists
       const users = await storage.getUsers();
+      console.log("Register: Utilisateurs récupérés:", users);
+      
       const emailExists = users.some(u => u.email === email);
       
       if (emailExists) {
+        console.log("Register: Email déjà utilisé");
         toast({
           title: "Erreur d'inscription",
           description: "Cet email est déjà utilisé",
@@ -88,6 +103,8 @@ export default function Register() {
         name
       };
       
+      console.log("Register: Création d'un nouvel utilisateur:", newUser);
+      
       // Save user to database
       await storage.saveUser(newUser);
       
@@ -98,6 +115,7 @@ export default function Register() {
       // Set as current user
       await storage.setCurrentUser(newUser);
       
+      console.log("Register: Inscription réussie");
       toast({
         title: "Inscription réussie",
         description: "Votre compte a été créé avec succès"
@@ -111,17 +129,19 @@ export default function Register() {
         description: "Une erreur s'est produite lors de l'inscription",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
       <div className="w-full max-w-md px-8 py-10 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-6">Inscription</h1>
+        <h1 className="text-2xl font-bold text-center mb-6 text-purple-800">Inscription</h1>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">Nom</label>
+            <label htmlFor="name" className="text-sm font-medium text-gray-700">Nom</label>
             <Input
               id="name"
               type="text"
@@ -134,7 +154,7 @@ export default function Register() {
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
             <Input
               id="email"
               type="email"
@@ -147,7 +167,7 @@ export default function Register() {
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">Mot de passe</label>
+            <label htmlFor="password" className="text-sm font-medium text-gray-700">Mot de passe</label>
             <Input
               id="password"
               type="password"
@@ -159,7 +179,7 @@ export default function Register() {
           </div>
           
           <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="text-sm font-medium">Confirmer le mot de passe</label>
+            <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirmer le mot de passe</label>
             <Input
               id="confirmPassword"
               type="password"
@@ -170,7 +190,13 @@ export default function Register() {
             {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
           </div>
           
-          <Button type="submit" className="w-full">S'inscrire</Button>
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? "Inscription en cours..." : "S'inscrire"}
+          </Button>
         </form>
         
         <div className="mt-4 text-center">
