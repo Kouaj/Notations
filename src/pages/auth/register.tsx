@@ -7,6 +7,16 @@ import { useLocation } from 'wouter';
 import { storage } from '@/lib/storage';
 import { User } from '@/shared/schema';
 import { z } from 'zod';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: "Nom doit contenir au moins 2 caractères" }),
@@ -24,6 +34,8 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorDetails, setErrorDetails] = useState('');
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
@@ -123,24 +135,25 @@ export default function Register() {
       // Sauvegarde de l'utilisateur
       try {
         console.log("Register: Tentative de sauvegarde de l'utilisateur");
-        await storage.saveUser(newUser);
-        console.log("Register: Utilisateur sauvegardé avec succès");
+        const savedUser = await storage.saveUser(newUser);
+        console.log("Register: Utilisateur sauvegardé avec succès:", savedUser);
         
         // Vérification immédiate
-        const savedUser = await storage.getUserById(id);
-        console.log("Register: Vérification de la sauvegarde:", savedUser);
+        const verifiedUser = await storage.getUserById(id);
+        console.log("Register: Vérification de la sauvegarde:", verifiedUser);
         
-        if (!savedUser) {
+        if (!verifiedUser) {
           throw new Error("L'utilisateur n'a pas été sauvegardé correctement");
         }
         
         // Définir comme utilisateur courant
-        await storage.setCurrentUser(savedUser);
+        await storage.setCurrentUser(verifiedUser);
         console.log("Register: Utilisateur défini comme courant");
         
         toast({
           title: "Inscription réussie",
-          description: "Votre compte a été créé avec succès"
+          description: "Votre compte a été créé avec succès",
+          variant: "success"
         });
         
         // Redirection plus douce
@@ -148,22 +161,63 @@ export default function Register() {
           console.log("Register: Redirection vers la page d'accueil");
           setLocation('/');
         }, 1000);
-      } catch (saveError) {
+      } catch (saveError: any) {
         console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
         // Nettoyage en cas d'erreur
         localStorage.removeItem(`user_${id}_password`);
+        
+        // Stocker les détails de l'erreur pour affichage
+        const errorMessage = saveError.message || "Erreur inconnue";
+        console.error("Détails de l'erreur:", errorMessage);
+        setErrorDetails(`Erreur de sauvegarde: ${errorMessage}`);
+        setShowErrorDialog(true);
+        
         throw saveError;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Register: Erreur lors de l'inscription:", error);
-      setErrors(prev => ({ ...prev, general: "Une erreur s'est produite lors de l'inscription" }));
+      const errorMessage = error.message || "Une erreur s'est produite lors de l'inscription";
+      setErrors(prev => ({ ...prev, general: errorMessage }));
+      
       toast({
-        title: "Erreur",
-        description: "Une erreur s'est produite lors de l'inscription. Veuillez réessayer.",
+        title: "Erreur d'inscription",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const resetDatabase = async () => {
+    try {
+      console.log("Tentative de réinitialisation de la base de données...");
+      const success = await storage.clearAllUsers();
+      
+      if (success) {
+        console.log("Base de données réinitialisée avec succès");
+        toast({
+          title: "Base de données réinitialisée",
+          description: "Toutes les données utilisateur ont été effacées",
+          variant: "success"
+        });
+        // Rafraîchir la page pour repartir à zéro
+        window.location.reload();
+      } else {
+        console.error("Échec de la réinitialisation de la base de données");
+        toast({
+          title: "Erreur",
+          description: "Impossible de réinitialiser la base de données",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la réinitialisation:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive"
+      });
     }
   };
 
@@ -246,7 +300,43 @@ export default function Register() {
             </Button>
           </p>
         </div>
+        
+        <div className="mt-8 pt-4 border-t border-gray-200">
+          <details className="text-sm text-gray-500">
+            <summary className="cursor-pointer hover:text-purple-600">Options de débogage</summary>
+            <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
+              <p className="text-xs text-gray-500 mb-2">Ces options sont uniquement pour le développement et le débogage.</p>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="w-full mt-2"
+                onClick={resetDatabase}
+              >
+                Réinitialiser la base de données
+              </Button>
+            </div>
+          </details>
+        </div>
       </div>
+      
+      <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Erreur technique</AlertDialogTitle>
+            <AlertDialogDescription>
+              Une erreur s'est produite lors de l'inscription. Détails techniques:
+              <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-32">
+                {errorDetails}
+              </pre>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowErrorDialog(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

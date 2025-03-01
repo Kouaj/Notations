@@ -36,11 +36,11 @@ export class UserStorage extends BaseStorage {
         throw new Error("Email already exists");
       }
       
-      // Utilisez put avec la clé explicite pour garantir la sauvegarde
+      // Utilisons la méthode add pour un nouvel utilisateur
       await this.performTransaction(
         STORES.USERS,
         'readwrite',
-        store => store.put(user, user.id)
+        store => store.put(user)
       );
       
       // Vérifier que l'utilisateur a bien été sauvegardé
@@ -115,81 +115,56 @@ export class UserStorage extends BaseStorage {
   }
 
   async clearAllUsers(): Promise<boolean> {
-    console.log("🚀 Début de la réinitialisation complète des utilisateurs");
+    console.log("🧹 Début de la réinitialisation complète des utilisateurs");
     
-    // Étape 1: Suppression complète de la base de données
     try {
-      // On ferme d'abord toute connexion existante
-      const dbPromise = this.dbPromise;
-      if (dbPromise) {
-        const db = await dbPromise.catch(() => null);
+      // 1. Fermer toute connexion existante à la base de données
+      if (this.dbPromise) {
+        const db = await this.dbPromise.catch(() => null);
         if (db) {
           db.close();
-          console.log("Base de données fermée avec succès");
+          console.log("🔒 Base de données fermée avec succès");
         }
       }
       
-      // Supprimer complètement la base de données
+      // 2. Supprimer complètement la base de données
       return new Promise((resolve) => {
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-        
-        deleteRequest.onsuccess = () => {
-          console.log("🎉 Base de données supprimée avec succès");
-          
-          // Étape 2: Nettoyer localStorage
-          console.log("Nettoyage de localStorage");
-          const toRemove = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('user_') && key?.endsWith('_password')) {
-              toRemove.push(key);
-            }
-          }
-          
-          // Supprimer les clés identifiées
-          toRemove.forEach(key => {
-            console.log(`Suppression de la clé localStorage: ${key}`);
-            localStorage.removeItem(key);
-          });
-          
-          // Étape 3: Recréer la base de données
-          console.log("Recréation de la base de données");
-          // Forcer la réinitialisation de la promise pour recréer la base de données
-          this.dbPromise = this.initDB();
-          
-          // Vérifier que la base est recréée correctement
-          this.dbPromise.then(() => {
-            console.log("✅ Base de données recréée avec succès");
-            
-            // Vérifier que tout est bien réinitialisé après un court délai
-            setTimeout(async () => {
-              try {
-                const users = await this.getUsers();
-                const currentUser = await this.getCurrentUser();
-                
-                if (users.length === 0 && !currentUser) {
-                  console.log("✅ Réinitialisation complète confirmée");
-                  resolve(true);
-                } else {
-                  console.error("❌ Échec de la réinitialisation complète");
-                  console.log("Users restants:", users);
-                  console.log("Current user:", currentUser);
-                  resolve(false);
-                }
-              } catch (error) {
-                console.error("Erreur lors de la vérification finale:", error);
-                resolve(false);
-              }
-            }, 500);
-          }).catch(error => {
-            console.error("Erreur lors de la recréation de la base de données:", error);
-            resolve(false);
-          });
-        };
         
         deleteRequest.onerror = (event) => {
           console.error("❌ Erreur lors de la suppression de la base de données:", event);
           resolve(false);
+        };
+        
+        deleteRequest.onblocked = (event) => {
+          console.warn("⚠️ La suppression de la base de données est bloquée:", event);
+          // Continuer malgré le blocage
+        };
+        
+        deleteRequest.onsuccess = () => {
+          console.log("🗑️ Base de données supprimée avec succès");
+          
+          // 3. Nettoyer localStorage (mot de passe stocké)
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.includes('_password')) {
+              localStorage.removeItem(key);
+              console.log(`🧹 Suppression de la clé localStorage: ${key}`);
+            }
+          }
+          
+          // 4. Recréer la base de données avec des magasins vides
+          this.dbPromise = this.initDB();
+          
+          this.dbPromise
+            .then(() => {
+              console.log("✅ Base de données recréée avec succès");
+              resolve(true);
+            })
+            .catch((error) => {
+              console.error("❌ Erreur lors de la recréation de la base de données:", error);
+              resolve(false);
+            });
         };
       });
     } catch (error) {
