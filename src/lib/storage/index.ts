@@ -1,120 +1,115 @@
 
-import { User, Reseau, Parcelle, HistoryRecord, Note } from '@/shared/schema';
+import { UserStorage } from './userStorage';
+import { ReseauStorage } from './reseauStorage';
+import { ParcelleStorage } from './parcelleStorage';
+import { HistoryStorage } from './historyStorage';
 import { IDBStorage } from './interfaces';
-import { localStorage, DB_NAME, DB_VERSION, STORES } from './core';
 
-// For now, we'll use the localStorage implementation directly
-// Later, this can be replaced with IndexedDB implementation
+// Aggregate class that implements all storage interfaces
 class IndexedDBStorage implements IDBStorage {
+  private userStorage = new UserStorage();
+  private reseauStorage = new ReseauStorage();
+  private parcelleStorage = new ParcelleStorage();
+  private historyStorage = new HistoryStorage();
+
   // User methods
-  async getUsers(): Promise<User[]> {
-    return localStorage.getUsers();
+  async getUsers() {
+    return this.userStorage.getUsers();
   }
 
-  async saveUser(user: User): Promise<User> {
-    return localStorage.saveUser(user);
+  async saveUser(user) {
+    return this.userStorage.saveUser(user);
   }
 
-  async getUserById(id: string): Promise<User | null> {
-    return localStorage.getUserById(id);
+  async getUserById(id) {
+    return this.userStorage.getUserById(id);
   }
 
-  async getCurrentUser(): Promise<User | null> {
-    return localStorage.getCurrentUser();
+  async getCurrentUser() {
+    return this.userStorage.getCurrentUser();
   }
 
-  async setCurrentUser(user: User | null): Promise<void> {
-    return localStorage.setCurrentUser(user);
+  async setCurrentUser(user) {
+    return this.userStorage.setCurrentUser(user);
   }
 
   // Réseau methods
-  async getReseaux(): Promise<Reseau[]> {
-    return localStorage.getReseaux();
+  async getReseaux() {
+    return this.reseauStorage.getReseaux();
   }
 
-  async getReseauById(id: number): Promise<Reseau | null> {
-    return localStorage.getReseauById(id);
+  async getReseauxByUser(userId) {
+    return this.reseauStorage.getReseauxByUser(userId);
   }
 
-  async saveReseau(reseau: Reseau): Promise<Reseau> {
-    return localStorage.saveReseau(reseau);
+  async saveReseau(reseau) {
+    return this.reseauStorage.saveReseau(reseau);
   }
 
-  async setSelectedReseau(reseau: Reseau): Promise<void> {
-    return localStorage.setSelectedReseau(reseau);
+  async deleteReseau(id) {
+    return this.reseauStorage.deleteReseau(id);
   }
 
-  async getSelectedReseau(): Promise<Reseau | null> {
-    return localStorage.getSelectedReseau();
+  async updateReseau(reseau) {
+    return this.reseauStorage.updateReseau(reseau);
+  }
+
+  async setSelectedReseau(reseau) {
+    return this.reseauStorage.setSelectedReseau(reseau);
+  }
+
+  async getSelectedReseau() {
+    return this.reseauStorage.getSelectedReseau();
   }
 
   // Parcelle methods
-  async getParcelles(): Promise<Parcelle[]> {
-    return localStorage.getParcelles();
+  async getParcelles() {
+    return this.parcelleStorage.getParcelles();
   }
 
-  async getParcelleById(id: number): Promise<Parcelle | null> {
-    return localStorage.getParcelleById(id);
+  async getParcellesByUser(userId) {
+    return this.parcelleStorage.getParcellesByUser(userId);
   }
 
-  async getParcellesByReseau(reseauId: number): Promise<Parcelle[]> {
-    return localStorage.getParcellesByReseau(reseauId);
+  async getParcellesByReseau(reseauId, userId) {
+    return this.parcelleStorage.getParcellesByReseau(reseauId, userId);
   }
 
-  async saveParcelle(parcelle: Parcelle): Promise<Parcelle> {
-    return localStorage.saveParcelle(parcelle);
+  async saveParcelle(parcelle) {
+    return this.parcelleStorage.saveParcelle(parcelle);
   }
 
-  async setSelectedParcelle(parcelle: Parcelle | null): Promise<void> {
-    return localStorage.setSelectedParcelle(parcelle);
+  async deleteParcelle(id) {
+    return this.parcelleStorage.deleteParcelle(id);
   }
 
-  async getSelectedParcelle(): Promise<Parcelle | null> {
-    return localStorage.getSelectedParcelle();
+  async updateParcelle(parcelle) {
+    return this.parcelleStorage.updateParcelle(parcelle);
+  }
+
+  async setSelectedParcelle(parcelle) {
+    return this.parcelleStorage.setSelectedParcelle(parcelle);
+  }
+
+  async getSelectedParcelle() {
+    return this.parcelleStorage.getSelectedParcelle();
   }
 
   // History methods
-  async getHistory(): Promise<HistoryRecord[]> {
-    return localStorage.getHistory();
+  async getHistory() {
+    return this.historyStorage.getHistory();
   }
 
-  async getHistoryByUser(userId: string): Promise<HistoryRecord[]> {
-    return localStorage.getHistoryByUser(userId);
+  async getHistoryByUser(userId) {
+    return this.historyStorage.getHistoryByUser(userId);
   }
 
-  async getHistoryByParcelle(parcelleId: number): Promise<HistoryRecord[]> {
-    return localStorage.getHistoryByParcelle(parcelleId);
+  async saveHistory(record) {
+    return this.historyStorage.saveHistory(record);
   }
 
-  async getHistoryByReseau(reseauId: number): Promise<HistoryRecord[]> {
-    return localStorage.getHistoryByReseau(reseauId);
-  }
-
-  async saveHistory(record: HistoryRecord): Promise<HistoryRecord> {
-    return localStorage.saveHistory(record);
-  }
-
-  // Notes methods
-  async getNotes(): Promise<Note[]> {
-    return localStorage.getNotes();
-  }
-
-  async getNotesByHistoryRecord(historyRecordId: number): Promise<Note[]> {
-    return localStorage.getNotesByHistoryRecord(historyRecordId);
-  }
-
-  async saveNote(note: Note): Promise<Note> {
-    return localStorage.saveNote(note);
-  }
-
-  // Alias for saveHistory for compatibility
-  async saveNotation(record: HistoryRecord): Promise<HistoryRecord> {
-    return localStorage.saveNotation(record);
-  }
-
-  // Reset method
-  async resetDatabase(): Promise<void> {
-    return localStorage.resetDatabase();
+  async deleteHistory(id) {
+    return this.historyStorage.deleteHistory(id);
   }
 }
 

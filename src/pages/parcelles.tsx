@@ -23,38 +23,14 @@ export default function Parcelles() {
   const { toast } = useToast();
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const currentUser = await storage.getCurrentUser();
-        
-        if (!currentUser) {
-          toast({
-            title: "Erreur",
-            description: "Vous devez être connecté pour voir vos parcelles",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        const [userParcelles, userReseaux] = await Promise.all([
-          storage.getParcellesByUser(currentUser.id),
-          storage.getReseauxByUser(currentUser.id)
-        ]);
-        
-        setParcelles(userParcelles);
-        setReseaux(userReseaux);
-      } catch (error) {
-        console.error("Erreur lors du chargement des données:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les données",
-          variant: "destructive"
-        });
-      }
-    }
-    
-    loadData();
-  }, [toast]);
+    Promise.all([
+      storage.getParcelles(),
+      storage.getReseaux()
+    ]).then(([parcelles, reseaux]) => {
+      setParcelles(parcelles);
+      setReseaux(reseaux);
+    });
+  }, []);
 
   const handleAddPlacette = () => {
     setNewParcelle({
@@ -101,11 +77,12 @@ export default function Parcelles() {
         placettes: newParcelle.placettes.map((p, index) => ({
           id: index + 1,
           name: p.name,
-          parcelleId: 0,
+          parcelleId: 0, // Sera mis à jour après la création de la parcelle
           notes: []
         }))
       };
 
+      // Mettre à jour les IDs des placettes
       newParcelleData.placettes = newParcelleData.placettes.map(p => ({
         ...p,
         parcelleId: newParcelleData.id

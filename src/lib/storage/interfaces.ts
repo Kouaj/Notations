@@ -1,42 +1,37 @@
 
-import { User, Reseau, Parcelle, HistoryRecord, Note } from '@/shared/schema';
+import { Parcelle, Reseau, HistoryRecord, User } from '@/shared/schema';
 
+// Storage interface for IndexedDB operations
 export interface IDBStorage {
-  // Utilisateurs
-  getCurrentUser: () => Promise<User | null>;
-  saveUser: (user: User) => Promise<User>;
-  getUsers: () => Promise<User[]>;
-  getUserById: (id: string) => Promise<User | null>;
-  setCurrentUser: (user: User | null) => Promise<void>;
+  // Users
+  getUsers(): Promise<User[]>;
+  saveUser(user: User): Promise<void>;
+  getUserById(id: string): Promise<User | null>;
+  getCurrentUser(): Promise<User | null>;
+  setCurrentUser(user: User | null): Promise<void>;
   
   // Réseaux
-  getReseaux: () => Promise<Reseau[]>;
-  getReseauById: (id: number) => Promise<Reseau | null>;
-  saveReseau: (reseau: Reseau) => Promise<Reseau>;
-  getSelectedReseau: () => Promise<Reseau | null>;
-  setSelectedReseau: (reseau: Reseau) => Promise<void>;
+  getReseaux(): Promise<Reseau[]>;
+  getReseauxByUser(userId: string): Promise<Reseau[]>;
+  saveReseau(reseau: Reseau): Promise<void>;
+  deleteReseau(id: number): Promise<void>;
+  updateReseau(reseau: Reseau): Promise<void>;
+  setSelectedReseau(reseau: Reseau | null): Promise<void>;
+  getSelectedReseau(): Promise<Reseau | null>;
   
   // Parcelles
-  getParcelles: () => Promise<Parcelle[]>;
-  getParcelleById: (id: number) => Promise<Parcelle | null>;
-  getParcellesByReseau: (reseauId: number) => Promise<Parcelle[]>;
-  saveParcelle: (parcelle: Parcelle) => Promise<Parcelle>;
-  getSelectedParcelle: () => Promise<Parcelle | null>;
-  setSelectedParcelle: (parcelle: Parcelle | null) => Promise<void>;
+  getParcelles(): Promise<Parcelle[]>;
+  getParcellesByUser(userId: string): Promise<Parcelle[]>;
+  getParcellesByReseau(reseauId: number, userId: string): Promise<Parcelle[]>;
+  saveParcelle(parcelle: Parcelle): Promise<void>;
+  deleteParcelle(id: number): Promise<void>;
+  updateParcelle(parcelle: Parcelle): Promise<void>;
+  setSelectedParcelle(parcelle: Parcelle | null): Promise<void>;
+  getSelectedParcelle(): Promise<Parcelle | null>;
   
-  // Historique et notations
-  getHistory: () => Promise<HistoryRecord[]>;
-  getHistoryByUser: (userId: string) => Promise<HistoryRecord[]>;
-  getHistoryByParcelle: (parcelleId: number) => Promise<HistoryRecord[]>;
-  getHistoryByReseau: (reseauId: number) => Promise<HistoryRecord[]>;
-  saveHistory: (record: HistoryRecord) => Promise<HistoryRecord>;
-  saveNotation: (record: HistoryRecord) => Promise<HistoryRecord>; // Alias pour saveHistory
-  
-  // Notes et photos
-  getNotes: () => Promise<Note[]>;
-  getNotesByHistoryRecord: (historyRecordId: number) => Promise<Note[]>;
-  saveNote: (note: Note) => Promise<Note>;
-  
-  // Réinitialisation (pour dev)
-  resetDatabase: () => Promise<void>;
+  // Historique
+  getHistory(): Promise<HistoryRecord[]>;
+  getHistoryByUser(userId: string): Promise<HistoryRecord[]>;
+  saveHistory(record: HistoryRecord): Promise<void>;
+  deleteHistory(id: number): Promise<void>;
 }

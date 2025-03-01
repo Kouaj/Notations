@@ -1,0 +1,84 @@
+
+name: Azure Web App Deployment
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: 'Production'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        
+    - name: Check Node.js and npm versions
+      run: |
+        node -v
+        npm -v
+        
+    - name: Install dependencies with specific options
+      run: |
+        npm install --legacy-peer-deps --ignore-scripts
+        
+    - name: Build
+      run: npm run build
+      env:
+        CI: false
+        
+    - name: Create web.config
+      run: |
+        mkdir -p dist
+        echo '<?xml version="1.0" encoding="utf-8"?>' > dist/web.config
+        echo '<configuration>' >> dist/web.config
+        echo '  <system.webServer>' >> dist/web.config
+        echo '    <rewrite>' >> dist/web.config
+        echo '      <rules>' >> dist/web.config
+        echo '        <rule name="React Routes" stopProcessing="true">' >> dist/web.config
+        echo '          <match url=".*" />' >> dist/web.config
+        echo '          <conditions logicalGrouping="MatchAll">' >> dist/web.config
+        echo '            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />' >> dist/web.config
+        echo '            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />' >> dist/web.config
+        echo '          </conditions>' >> dist/web.config
+        echo '          <action type="Rewrite" url="/" />' >> dist/web.config
+        echo '        </rule>' >> dist/web.config
+        echo '      </rules>' >> dist/web.config
+        echo '    </rewrite>' >> dist/web.config
+        echo '    <staticContent>' >> dist/web.config
+        echo '      <mimeMap fileExtension=".json" mimeType="application/json" />' >> dist/web.config
+        echo '      <mimeMap fileExtension=".woff" mimeType="application/font-woff" />' >> dist/web.config
+        echo '      <mimeMap fileExtension=".woff2" mimeType="application/font-woff" />' >> dist/web.config
+        echo '    </staticContent>' >> dist/web.config
+        echo '  </system.webServer>' >> dist/web.config
+        echo '</configuration>' >> dist/web.config
+        
+    - name: Verify files for deployment
+      run: |
+        echo "Checking build output directory:"
+        ls -la dist/
+        echo "Checking if web.config exists:"
+        if [ -f "dist/web.config" ]; then
+          echo "web.config exists in dist folder"
+        else
+          echo "ERROR: web.config not found in dist folder"
+          exit 1
+        fi
+        
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: 'Deploy to Azure WebApp'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'friendly-copy-crafter'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: './dist'

@@ -1,45 +1,71 @@
 
-import React from "react";
-import { Router, Route } from "wouter";
-import Home from "@/pages/home";
-import Reseaux from "@/pages/reseaux";
-import Parcelles from "@/pages/parcelles";
-import History from "@/pages/history";
-import LoginPage from "@/pages/auth/login";
-import RegisterPage from "@/pages/auth/register";
-import NotFound from "@/pages/not-found";
-import FallbackPage from "@/pages/fallback";
-import { Navigation } from "./Navigation";
+import React, { useEffect } from "react";
+import { Router, Switch, Route, useLocation } from "wouter";
+import AppLayout from "@/components/AppLayout";
+import Login from "@/pages/auth/login";
+import Register from "@/pages/auth/register";
+import { storage } from "@/lib/storage";
 
-// Version simplifiée du ProtectedRoute pour débloquer le développement
-const SimpleProtectedRoute = ({ component: Component }) => {
-  console.log("🔒 SimpleProtectedRoute rendering component:", Component.name || "Unknown");
-  return (
-    <>
-      <Navigation />
-      <Component />
-    </>
-  );
+// Configuration for wouter to work with GitHub Pages
+export const useHashLocation = () => {
+  const [loc, setLoc] = React.useState(window.location.hash.slice(1) || "/");
+
+  React.useEffect(() => {
+    const handler = () => {
+      const hash = window.location.hash.slice(1);
+      setLoc(hash || "/");
+    };
+
+    window.addEventListener("hashchange", handler);
+    handler(); // Initialize with current hash
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+
+  const navigate = (to: string) => {
+    window.location.hash = to;
+  };
+
+  return [loc, navigate] as [string, (to: string) => void];
 };
 
-export function AppRouter() {
-  console.log("🧭 AppRouter rendering - Should display routes soon");
+export default function AppRouter() {
+  const [, setLocation] = useLocation();
   
+  // Check authentication status on initial load
+  useEffect(() => {
+    const checkAuth = async () => {
+      const user = await storage.getCurrentUser();
+      // If no user is logged in, redirect to login page
+      if (!user) {
+        setLocation('/auth/login');
+      }
+    };
+    
+    checkAuth();
+  }, [setLocation]);
+
   return (
-    <Router>
-      <div className="app-content">
-        <Route path="/" component={() => {
-          console.log("👋 Tentative de rendu de la route Accueil '/'");
-          return <SimpleProtectedRoute component={Home} />;
-        }} />
-        <Route path="/reseaux" component={() => <SimpleProtectedRoute component={Reseaux} />} />
-        <Route path="/parcelles" component={() => <SimpleProtectedRoute component={Parcelles} />} />
-        <Route path="/history" component={() => <SimpleProtectedRoute component={History} />} />
-        <Route path="/auth/login" component={LoginPage} />
-        <Route path="/auth/register" component={RegisterPage} />
-        <Route path="/fallback" component={FallbackPage} />
-        <Route path="/:rest*" component={NotFound} />
-      </div>
+    <Router hook={useHashLocation}>
+      <Switch>
+        <Route path="/auth/login">
+          <Login />
+        </Route>
+        <Route path="/auth/register">
+          <Register />
+        </Route>
+        <Route path="/auth">
+          {() => {
+            const [, setLocation] = useLocation();
+            useEffect(() => {
+              setLocation('/auth/login');
+            }, [setLocation]);
+            return null;
+          }}
+        </Route>
+        <Route>
+          <AppLayout />
+        </Route>
+      </Switch>
     </Router>
   );
 }
