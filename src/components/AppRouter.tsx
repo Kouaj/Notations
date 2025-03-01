@@ -20,8 +20,9 @@ export default function AppRouter() {
       try {
         console.log("AppRouter: Vérification de l'authentification initiale");
         
-        // Initialisation de la base de données
-        await storage.initDB();
+        // Initialisation explicite de la base de données
+        const db = await storage.initDB();
+        console.log("AppRouter: Base de données initialisée avec succès", db);
         
         const user = await storage.getCurrentUser();
         console.log("AppRouter: Utilisateur actuel:", user);

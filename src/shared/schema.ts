@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 
 export type NotationType = "maladie" | "pheno" | "ravageur" | "recouvrement" | "analyse_sols" | "vers_terre" | "pollinisateur" | "pot_barber" | "commentaire";
@@ -73,6 +74,8 @@ export interface HistoryRecord {
   commentaire?: string;
   photoUrl?: string;
 }
+
+export type History = HistoryRecord;
 
 export interface HistoryGroup {
   parcelleName: string;

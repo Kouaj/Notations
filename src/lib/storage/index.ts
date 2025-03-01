@@ -5,6 +5,8 @@ import { ParcelleStorage } from './parcelleStorage';
 import { HistoryStorage } from './historyStorage';
 import { IDBStorage } from './interfaces';
 import { User, Reseau, Parcelle, HistoryRecord } from '@/shared/schema';
+import { IDBPDatabase } from 'idb';
+import { DB_NAME, DB_VERSION, STORES, AppDB } from './core';
 
 // Aggregate class that implements all storage interfaces
 class IndexedDBStorage implements IDBStorage {
@@ -12,6 +14,19 @@ class IndexedDBStorage implements IDBStorage {
   private reseauStorage = new ReseauStorage();
   private parcelleStorage = new ParcelleStorage();
   private historyStorage = new HistoryStorage();
+
+  // Initialisation de la base de données
+  async initDB(): Promise<IDBPDatabase<AppDB>> {
+    try {
+      console.log("Storage: Initialisation de la base de données");
+      const db = await this.userStorage.initDB();
+      console.log("Storage: Base de données initialisée avec succès");
+      return db;
+    } catch (error) {
+      console.error("Storage: Erreur lors de l'initialisation de la base de données", error);
+      throw error;
+    }
+  }
 
   // User methods
   async getUsers() {
@@ -250,3 +265,4 @@ export const storage = new IndexedDBStorage();
 
 // Re-export necessary constants
 export { DB_NAME, DB_VERSION, STORES } from './core';
+export type { AppDB } from './core';

@@ -4,45 +4,52 @@ import { BaseStorage, STORES } from './core';
 
 export class HistoryStorage extends BaseStorage {
   async getHistory(): Promise<HistoryRecord[]> {
-    return this.performTransaction(
-      STORES.HISTORY,
-      'readonly',
-      store => store.getAll()
-    );
+    try {
+      const history = await this.performTransaction(
+        STORES.HISTORY,
+        'readonly',
+        store => store.getAll()
+      );
+      return history || [];
+    } catch (error) {
+      console.error("Error getting history:", error);
+      return [];
+    }
   }
 
   async getHistoryByUser(userId: string): Promise<HistoryRecord[]> {
-    const history = await this.getHistory();
-    return history.filter(h => h.userId === userId);
+    try {
+      const history = await this.getHistory();
+      return history.filter(record => record.userId === userId);
+    } catch (error) {
+      console.error("Error getting history by user:", error);
+      return [];
+    }
   }
 
   async saveHistory(record: HistoryRecord): Promise<void> {
-    await this.performTransaction(
-      STORES.HISTORY,
-      'readwrite',
-      store => store.put(record)
-    );
+    try {
+      await this.performTransaction(
+        STORES.HISTORY,
+        'readwrite',
+        store => store.add(record)
+      );
+    } catch (error) {
+      console.error("Error saving history record:", error);
+      throw error;
+    }
   }
 
   async deleteHistory(id: number): Promise<void> {
-    await this.performTransaction(
-      STORES.HISTORY,
-      'readwrite',
-      store => store.delete(id)
-    );
-  }
-
-  async savePhoto(photo: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        resolve(dataUrl);
-      };
-      reader.onerror = () => {
-        reject(new Error('Failed to read file'));
-      };
-      reader.readAsDataURL(photo);
-    });
+    try {
+      await this.performTransaction(
+        STORES.HISTORY,
+        'readwrite',
+        store => store.delete(id)
+      );
+    } catch (error) {
+      console.error("Error deleting history record:", error);
+      throw error;
+    }
   }
 }

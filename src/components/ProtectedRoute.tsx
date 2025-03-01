@@ -11,11 +11,18 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [, setLocation] = useLocation();
   const redirectAttempted = useRef(false);
+  const checkingRef = useRef(false);
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (checkingRef.current) return;
+      checkingRef.current = true;
+      
       try {
         console.log("ProtectedRoute: Vérification de l'authentification...");
+        
+        // S'assurer que la base de données est initialisée
+        await storage.initDB();
         
         // Vérifier dans IndexedDB et localStorage
         const user = await storage.getCurrentUser();
@@ -43,18 +50,28 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
         // Vérifier le localStorage comme solution de secours
         const storedUser = localStorage.getItem('current_user');
         if (storedUser) {
-          console.log("ProtectedRoute: Utilisateur trouvé dans localStorage");
-          setIsAuthenticated(true);
-          redirectAttempted.current = false;
-        } else {
-          setIsAuthenticated(false);
-          
-          // Éviter les redirections en boucle
-          if (!redirectAttempted.current) {
-            redirectAttempted.current = true;
-            setLocation('/auth/login');
+          try {
+            const user = JSON.parse(storedUser);
+            if (user && user.id && user.email) {
+              console.log("ProtectedRoute: Utilisateur trouvé dans localStorage");
+              setIsAuthenticated(true);
+              redirectAttempted.current = false;
+              return;
+            }
+          } catch (e) {
+            console.error("Erreur lors de l'analyse de l'utilisateur depuis localStorage:", e);
           }
         }
+        
+        setIsAuthenticated(false);
+        
+        // Éviter les redirections en boucle
+        if (!redirectAttempted.current) {
+          redirectAttempted.current = true;
+          setLocation('/auth/login');
+        }
+      } finally {
+        checkingRef.current = false;
       }
     };
     

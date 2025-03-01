@@ -1,14 +1,20 @@
+
 import { Parcelle, Reseau, HistoryRecord, User } from '@/shared/schema';
+import { IDBPDatabase } from 'idb';
+import { AppDB } from './core';
 
 // Storage interface for IndexedDB operations
 export interface IDBStorage {
+  // Database Initialization
+  initDB(): Promise<IDBPDatabase<AppDB>>;
+  
   // Users
   getUsers(): Promise<User[]>;
   saveUser(user: User): Promise<User>;
   getUserById(id: string): Promise<User | null>;
   getCurrentUser(): Promise<User | null>;
   setCurrentUser(user: User | null): Promise<void>;
-  clearAllUsers(): Promise<boolean>; // Nouvelle méthode
+  clearAllUsers(): Promise<boolean>;
   
   // Réseaux
   getReseaux(): Promise<Reseau[]>;

@@ -1,3 +1,4 @@
+
 import { User } from '@/shared/schema';
 import { BaseStorage, STORES, DB_NAME, DB_VERSION } from './core';
 
@@ -93,9 +94,22 @@ export class UserStorage extends BaseStorage {
       if (!user) {
         const storedUser = localStorage.getItem('current_user');
         if (storedUser) {
-          user = JSON.parse(storedUser);
-          // Synchroniser avec IndexedDB
-          await this.setCurrentUser(user);
+          try {
+            user = JSON.parse(storedUser);
+            // Vérifier que l'utilisateur a des propriétés valides
+            if (user && user.id && user.email) {
+              // Synchroniser avec IndexedDB
+              await this.setCurrentUser(user);
+            } else {
+              console.error("Invalid user data in localStorage:", user);
+              localStorage.removeItem('current_user');
+              return null;
+            }
+          } catch (e) {
+            console.error("Error parsing user from localStorage:", e);
+            localStorage.removeItem('current_user');
+            return null;
+          }
         }
       }
       
@@ -109,7 +123,9 @@ export class UserStorage extends BaseStorage {
         const storedUser = localStorage.getItem('current_user');
         if (storedUser) {
           const user = JSON.parse(storedUser);
-          return user;
+          if (user && user.id && user.email) {
+            return user;
+          }
         }
       } catch (e) {
         console.error("Fallback also failed:", e);
@@ -127,15 +143,15 @@ export class UserStorage extends BaseStorage {
       await this.performTransaction(
         STORES.CURRENT_USER,
         'readwrite',
-        store => {
+        async store => {
           // Si on efface l'utilisateur actuel
           if (!user) {
             localStorage.removeItem('current_user');
-            return store.clear();
+            return await store.clear();
           }
           // Sinon on le met à jour
           localStorage.setItem('current_user', JSON.stringify(user));
-          return store.put(user, 'current');
+          return await store.put(user, 'current');
         }
       );
       console.log("Current user set successfully");
@@ -210,7 +226,7 @@ export class UserStorage extends BaseStorage {
           const keysToRemove = [];
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key?.includes('_password')) {
+            if (key?.includes('_password') || key === 'current_user') {
               keysToRemove.push(key);
             }
           }

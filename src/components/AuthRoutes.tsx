@@ -12,14 +12,23 @@ export default function AuthRoutes() {
   const [, setLocation] = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const checkedRef = useRef(false);
   
   useEffect(() => {
     const checkAuth = async () => {
+      if (checkedRef.current) return;
+      checkedRef.current = true;
+      
       try {
         setIsChecking(true);
+        console.log("AuthRoutes: Vérification de l'authentification...");
+        
+        // S'assurer que la base de données est initialisée
+        await storage.initDB();
+        
         const user = await storage.getCurrentUser();
         if (user) {
-          console.log("AuthRoutes: Utilisateur déjà connecté");
+          console.log("AuthRoutes: Utilisateur déjà connecté", user);
           setIsAuthenticated(true);
         } else {
           console.log("AuthRoutes: Aucun utilisateur connecté");
@@ -48,6 +57,7 @@ export default function AuthRoutes() {
     if (isChecking) {
       return <div className="flex justify-center items-center h-screen">
         <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="ml-4 text-purple-800 font-medium">Vérification de l'authentification...</p>
       </div>;
     }
     
@@ -78,6 +88,7 @@ export default function AuthRoutes() {
           if (isChecking) {
             return <div className="flex justify-center items-center h-screen">
               <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="ml-4 text-purple-800 font-medium">Préparation de l'authentification...</p>
             </div>;
           }
           
@@ -86,4 +97,9 @@ export default function AuthRoutes() {
       </Route>
     </>
   );
+}
+
+function useRef(arg0: boolean): { current: boolean } {
+  const ref = { current: arg0 };
+  return ref;
 }
