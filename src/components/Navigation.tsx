@@ -4,7 +4,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { User } from "@/shared/schema";
 import { storage } from "@/lib/storage";
-import { UserMenu } from "./UserMenu";
+import UserMenu from "./UserMenu";
 
 export function Navigation() {
   const [location] = useLocation();

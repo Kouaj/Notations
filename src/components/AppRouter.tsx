@@ -9,11 +9,17 @@ import LoginPage from "@/pages/auth/login";
 import RegisterPage from "@/pages/auth/register";
 import NotFound from "@/pages/not-found";
 import FallbackPage from "@/pages/fallback";
+import { Navigation } from "./Navigation";
 
 // Version simplifiée du ProtectedRoute pour débloquer le développement
 const SimpleProtectedRoute = ({ component: Component }) => {
   console.log("🔒 SimpleProtectedRoute rendering component:", Component.name || "Unknown");
-  return <Component />;
+  return (
+    <>
+      <Navigation />
+      <Component />
+    </>
+  );
 };
 
 export function AppRouter() {

@@ -1,5 +1,5 @@
 
-import { User, Reseau, Parcelle, HistoryRecord, Note, Photo } from '@/shared/schema';
+import { User, Reseau, Parcelle, HistoryRecord, Note } from '@/shared/schema';
 
 export interface IDBStorage {
   // Utilisateurs
@@ -35,7 +35,6 @@ export interface IDBStorage {
   getNotes: () => Promise<Note[]>;
   getNotesByHistoryRecord: (historyRecordId: number) => Promise<Note[]>;
   saveNote: (note: Note) => Promise<Note>;
-  savePhoto: (photo: Photo) => Promise<Photo>;
   
   // Réinitialisation (pour dev)
   resetDatabase: () => Promise<void>;
