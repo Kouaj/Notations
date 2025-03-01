@@ -129,15 +129,28 @@ export class UserStorage extends BaseStorage {
       
       // 2. Supprimer complètement la base de données
       return new Promise((resolve) => {
+        // Stockage d'un timestamp pour éviter les boucles de rechargement
+        const lastResetTimestamp = localStorage.getItem('db_reset_timestamp');
+        const currentTime = Date.now();
+        
+        if (lastResetTimestamp && (currentTime - parseInt(lastResetTimestamp)) < 10000) {
+          console.warn("⚠️ Tentative de réinitialisation trop fréquente, attente...");
+          setTimeout(() => {
+            resolve(false);
+          }, 2000);
+          return;
+        }
+        
+        localStorage.setItem('db_reset_timestamp', currentTime.toString());
+        
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         
         deleteRequest.onerror = (event) => {
           console.error("❌ Erreur lors de la suppression de la base de données:", event);
           // Vérifier si c'est une erreur de version
           const error = (event.target as IDBOpenDBRequest).error;
-          if (error && error.name === "VersionError") {
-            console.warn("⚠️ Erreur de version détectée, essai de récupération...");
-            // Tentative de récupération en forçant un rechargement de la page
+          if (error && (error.name === "VersionError" || error.message?.includes("version"))) {
+            console.warn("⚠️ Erreur de version détectée, rechargement de la page...");
             window.location.reload();
             return;
           }
@@ -146,22 +159,31 @@ export class UserStorage extends BaseStorage {
         
         deleteRequest.onblocked = (event) => {
           console.warn("⚠️ La suppression de la base de données est bloquée:", event);
-          // Continuer malgré le blocage
+          setTimeout(() => {
+            window.location.reload(); // Forcer un rechargement après un délai
+          }, 1000);
         };
         
         deleteRequest.onsuccess = () => {
           console.log("🗑️ Base de données supprimée avec succès");
           
           // 3. Nettoyer localStorage (mot de passe stocké)
+          const keysToRemove = [];
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key?.includes('_password')) {
-              localStorage.removeItem(key);
-              console.log(`🧹 Suppression de la clé localStorage: ${key}`);
+              keysToRemove.push(key);
             }
           }
           
+          // Suppression des clés
+          keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            console.log(`🧹 Suppression de la clé localStorage: ${key}`);
+          });
+          
           // 4. Recréer la base de données avec des magasins vides
+          console.log(`Recréation de la base de données ${DB_NAME} avec version ${DB_VERSION}`);
           this.dbPromise = this.initDB();
           
           this.dbPromise
@@ -172,7 +194,7 @@ export class UserStorage extends BaseStorage {
             .catch((error) => {
               console.error("❌ Erreur lors de la recréation de la base de données:", error);
               // Si nous obtenons une erreur de version ici, nous devrons recharger la page
-              if (error && error.name === "VersionError") {
+              if (error && (error.name === "VersionError" || error.message?.includes("version"))) {
                 console.warn("⚠️ Erreur de version détectée, rechargement de la page...");
                 window.location.reload();
                 return;

@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useLocation } from 'wouter';
-import { storage } from '@/lib/storage';
+import { storage, DB_VERSION } from '@/lib/storage';
 import { User } from '@/shared/schema';
 import { z } from 'zod';
 import { 
@@ -51,6 +50,19 @@ export default function Register() {
     console.log("Register: Page d'inscription chargée");
     const checkCurrentUser = async () => {
       try {
+        // Vérification de la dernière réinitialisation
+        const lastReset = localStorage.getItem('db_reset_timestamp');
+        if (lastReset) {
+          const resetTime = parseInt(lastReset);
+          const currentTime = Date.now();
+          if ((currentTime - resetTime) < 5000) {
+            console.log("Base de données récemment réinitialisée, attente...");
+            // On attend un peu pour s'assurer que tout est bien initialisé
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        
+        console.log(`Version de la base de données configurée: ${DB_VERSION}`);
         const user = await storage.getCurrentUser();
         console.log("Register: Vérification de l'utilisateur actuel:", user);
         if (user) {
@@ -97,7 +109,7 @@ export default function Register() {
     setErrors({});
     
     try {
-      // Vérifier la base de données avant de créer l'utilisateur
+      // Vérification des utilisateurs existants
       console.log("Register: Vérification des utilisateurs existants");
       const existingUsers = await storage.getUsers();
       console.log("Register: Utilisateurs en base avant inscription:", existingUsers);
@@ -125,7 +137,7 @@ export default function Register() {
         name
       };
       
-      console.log("Register: Création d'un nouvel utilisateur:", newUser);
+      console.log(`Register: Création d'un nouvel utilisateur avec version DB ${DB_VERSION}:`, newUser);
       
       // Stockage du mot de passe simplifié en base64 (pour démo seulement)
       const hashedPassword = btoa(password);
@@ -166,8 +178,26 @@ export default function Register() {
         // Nettoyage en cas d'erreur
         localStorage.removeItem(`user_${id}_password`);
         
-        // Stocker les détails de l'erreur pour affichage
+        // Vérifier si c'est une erreur de version
         const errorMessage = saveError.message || "Erreur inconnue";
+        if (errorMessage.includes("version")) {
+          console.warn("⚠️ Erreur de version détectée, tentative de récupération...");
+          const success = await storage.clearAllUsers();
+          if (success) {
+            console.log("Base de données réinitialisée avec succès, rechargement...");
+            toast({
+              title: "Réinitialisation nécessaire",
+              description: "La base de données a été réinitialisée. Veuillez réessayer.",
+              variant: "default"
+            });
+            
+            // Attendre un peu avant de recharger
+            setTimeout(() => window.location.reload(), 2000);
+            return;
+          }
+        }
+        
+        // Stocker les détails de l'erreur pour affichage
         console.error("Détails de l'erreur:", errorMessage);
         setErrorDetails(`Erreur de sauvegarde: ${errorMessage}`);
         setShowErrorDialog(true);
@@ -192,6 +222,8 @@ export default function Register() {
   const resetDatabase = async () => {
     try {
       console.log("Tentative de réinitialisation de la base de données...");
+      setIsLoading(true);
+      
       const success = await storage.clearAllUsers();
       
       if (success) {
@@ -201,8 +233,8 @@ export default function Register() {
           description: "Toutes les données utilisateur ont été effacées",
           variant: "success"
         });
-        // Rafraîchir la page pour repartir à zéro
-        window.location.reload();
+        // Attendre un peu avant de recharger
+        setTimeout(() => window.location.reload(), 1000);
       } else {
         console.error("Échec de la réinitialisation de la base de données");
         toast({
@@ -218,6 +250,8 @@ export default function Register() {
         description: "Une erreur s'est produite lors de la réinitialisation",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
