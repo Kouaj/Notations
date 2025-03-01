@@ -1,107 +1,75 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { storage } from "@/lib/storage";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Check } from "lucide-react";
 
-/**
- * Composant pour réinitialiser tous les utilisateurs
- */
 export default function ResetUsersButton() {
-  const { toast } = useToast();
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  
+  const [resetSuccess, setResetSuccess] = useState(false);
+
   const handleReset = async () => {
-    if (isResetting) return; // Éviter les clics multiples
-    
+    setIsResetting(true);
     try {
-      setIsResetting(true);
-      console.log("Début de la réinitialisation des utilisateurs...");
+      await storage.clearAllUsers();
       
-      // Approche radicale: supprimer toutes les données
-      localStorage.clear();
-      
-      // Effacer la base de données IndexedDB
-      const request = indexedDB.deleteDatabase('LovableDemoDatabase');
-      
-      request.onsuccess = function() {
-        console.log("Base de données IndexedDB supprimée avec succès");
-        toast({
-          title: "Réinitialisation réussie",
-          description: "Toutes les données ont été supprimées. Redirection en cours...",
-          variant: "success"
-        });
-        
-        // Forcer un rechargement complet
-        setTimeout(() => {
-          console.log("Redirection...");
-          window.location.href = window.location.origin + window.location.pathname;
-        }, 1500);
+      // Créer un utilisateur par défaut
+      const defaultUser = {
+        id: "default-user",
+        name: "Utilisateur",
+        email: "user@example.com"
       };
       
-      request.onerror = function(event) {
-        console.error("Erreur lors de la suppression de la base de données:", event);
-        toast({
-          title: "Erreur",
-          description: "La réinitialisation n'a pas fonctionné. Veuillez réessayer.",
-          variant: "destructive"
-        });
-        setIsResetting(false);
-      };
+      await storage.saveUser(defaultUser);
+      await storage.setCurrentUser(defaultUser);
+      
+      setResetSuccess(true);
+      
+      // Recharger la page après un délai
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
-      console.error("Erreur lors de la réinitialisation des utilisateurs:", error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur s'est produite lors de la réinitialisation",
-        variant: "destructive"
-      });
+      console.error("Erreur lors de la réinitialisation:", error);
+    } finally {
       setIsResetting(false);
-      setIsOpen(false);
     }
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-        <AlertDialogTrigger asChild>
-          <Button 
-            variant="destructive" 
-            size="sm"
-            disabled={isResetting}
-          >
-            Réinitialiser tous les utilisateurs
-          </Button>
-        </AlertDialogTrigger>
+    <>
+      <Button 
+        variant="destructive" 
+        size="sm" 
+        onClick={() => setShowConfirmDialog(true)}
+      >
+        Réinitialiser les utilisateurs
+      </Button>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Réinitialiser tous les utilisateurs</AlertDialogTitle>
+            <AlertDialogTitle>Réinitialiser tous les utilisateurs?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action va supprimer tous les utilisateurs et effacer les données de connexion.
-              Cette opération est irréversible.
+              Cette action va supprimer tous les utilisateurs et les données associées.
+              Elle est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleReset}
-              disabled={isResetting}
-            >
-              {isResetting ? "Réinitialisation..." : "Confirmer"}
+            <AlertDialogAction onClick={handleReset} disabled={isResetting}>
+              {isResetting ? "Réinitialisation..." : resetSuccess ? (
+                <span className="flex items-center">
+                  <Check className="mr-1 h-4 w-4" />
+                  Succès
+                </span>
+              ) : "Confirmer"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

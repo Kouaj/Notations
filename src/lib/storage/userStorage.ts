@@ -1,6 +1,6 @@
 
 import { User } from '@/shared/schema';
-import { BaseStorage, STORES, DB_NAME, DB_VERSION } from './core';
+import { BaseStorage, STORES } from './core';
 
 export class UserStorage extends BaseStorage {
   async getUsers(): Promise<User[]> {
@@ -26,15 +26,6 @@ export class UserStorage extends BaseStorage {
 
     try {
       console.log("Saving user with valid data:", user);
-      
-      // Vérifier si l'email existe déjà
-      const existingUsers = await this.getUsers();
-      const emailExists = existingUsers.some(u => u.email === user.email && u.id !== user.id);
-      
-      if (emailExists) {
-        console.error("Email already exists:", user.email);
-        throw new Error("Email already exists");
-      }
       
       // Utilisons la méthode put pour tous les cas (nouveau ou mise à jour)
       await this.performTransaction(
@@ -100,14 +91,9 @@ export class UserStorage extends BaseStorage {
             if (user && user.id && user.email) {
               // Synchroniser avec IndexedDB
               await this.setCurrentUser(user);
-            } else {
-              console.error("Invalid user data in localStorage:", user);
-              localStorage.removeItem('current_user');
-              return null;
             }
           } catch (e) {
             console.error("Error parsing user from localStorage:", e);
-            localStorage.removeItem('current_user');
             return null;
           }
         }
@@ -164,8 +150,6 @@ export class UserStorage extends BaseStorage {
       } else {
         localStorage.removeItem('current_user');
       }
-      
-      throw error;
     }
   }
 
@@ -198,17 +182,11 @@ export class UserStorage extends BaseStorage {
         
         localStorage.setItem('db_reset_timestamp', currentTime.toString());
         
+        const DB_NAME = 'viticole-app-db';
         const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
         
         deleteRequest.onerror = (event) => {
           console.error("❌ Erreur lors de la suppression de la base de données:", event);
-          // Vérifier si c'est une erreur de version
-          const error = (event.target as IDBOpenDBRequest).error;
-          if (error && (error.name === "VersionError" || error.message?.includes("version"))) {
-            console.warn("⚠️ Erreur de version détectée, rechargement de la page...");
-            window.location.reload();
-            return;
-          }
           resolve(false);
         };
         
@@ -238,7 +216,7 @@ export class UserStorage extends BaseStorage {
           });
           
           // 4. Recréer la base de données avec des magasins vides
-          console.log(`Recréation de la base de données ${DB_NAME} avec version ${DB_VERSION}`);
+          console.log(`Recréation de la base de données`);
           this.dbPromise = this.initDB();
           
           this.dbPromise
@@ -248,12 +226,6 @@ export class UserStorage extends BaseStorage {
             })
             .catch((error) => {
               console.error("❌ Erreur lors de la recréation de la base de données:", error);
-              // Si nous obtenons une erreur de version ici, nous devons recharger la page
-              if (error && (error.name === "VersionError" || error.message?.includes("version"))) {
-                console.warn("⚠️ Erreur de version détectée, rechargement de la page...");
-                window.location.reload();
-                return;
-              }
               resolve(false);
             });
         };

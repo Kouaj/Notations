@@ -1,9 +1,8 @@
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import Navigation from "@/components/Navigation";
 import UserMenu from "@/components/UserMenu";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "@/pages/home";
 import Parcelles from "@/pages/parcelles";
 import Reseaux from "@/pages/reseaux";
@@ -16,19 +15,12 @@ export default function AppLayout() {
   const [location] = useLocation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const checkedAuth = useRef(false);
-  
-  // Vérifier si la route actuelle est une route d'authentification
-  const isAuthRoute = location.startsWith('/auth');
   
   // Récupérer l'utilisateur actuel
   useEffect(() => {
     const fetchUser = async () => {
-      if (checkedAuth.current) return;
-      
       try {
         console.log("AppLayout: Récupération de l'utilisateur actuel");
-        checkedAuth.current = true;
         
         // Récupérer l'utilisateur depuis le stockage
         const user = await storage.getCurrentUser();
@@ -37,37 +29,37 @@ export default function AppLayout() {
         if (user) {
           setCurrentUser(user);
         } else {
-          console.log("AppLayout: Aucun utilisateur trouvé, vérification du localStorage");
+          console.log("AppLayout: Aucun utilisateur trouvé, création d'un utilisateur par défaut");
           
-          // Vérifier le localStorage comme solution de secours
-          const storedUser = localStorage.getItem('current_user');
-          if (storedUser) {
-            try {
-              const parsedUser = JSON.parse(storedUser);
-              console.log("AppLayout: Utilisateur trouvé dans localStorage:", parsedUser);
-              
-              // Synchroniser avec IndexedDB
-              await storage.setCurrentUser(parsedUser);
-              setCurrentUser(parsedUser);
-            } catch (e) {
-              console.error("AppLayout: Erreur lors de l'analyse du JSON:", e);
-            }
-          }
+          // Créer un utilisateur par défaut
+          const defaultUser = {
+            id: "default-user",
+            name: "Utilisateur",
+            email: "user@example.com"
+          };
+          
+          await storage.saveUser(defaultUser);
+          await storage.setCurrentUser(defaultUser);
+          setCurrentUser(defaultUser);
         }
         
         setIsLoading(false);
       } catch (error) {
         console.error("AppLayout: Erreur lors de la récupération de l'utilisateur:", error);
         
-        // Vérifier le localStorage comme solution de secours
-        const storedUser = localStorage.getItem('current_user');
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setCurrentUser(parsedUser);
-          } catch (e) {
-            console.error("AppLayout: Erreur lors de l'analyse du JSON:", e);
-          }
+        // Créer un utilisateur par défaut en cas d'erreur
+        const defaultUser = {
+          id: "default-user",
+          name: "Utilisateur",
+          email: "user@example.com"
+        };
+        
+        try {
+          await storage.saveUser(defaultUser);
+          await storage.setCurrentUser(defaultUser);
+          setCurrentUser(defaultUser);
+        } catch (innerError) {
+          console.error("AppLayout: Erreur lors de la création de l'utilisateur par défaut:", innerError);
         }
         
         setIsLoading(false);
@@ -75,7 +67,7 @@ export default function AppLayout() {
     };
     
     fetchUser();
-  }, [location]);
+  }, []);
   
   // Si toujours en chargement, afficher l'indicateur de chargement avec animation
   if (isLoading) {
@@ -89,11 +81,11 @@ export default function AppLayout() {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
-      {!isAuthRoute && currentUser && (
+      {currentUser && (
         <header className="bg-gradient-to-r from-purple-700 to-indigo-600 text-white py-2 shadow-md">
           <div className="container mx-auto px-3 flex justify-between items-center">
             <h1 className="text-lg font-bold">Notations Viticoles</h1>
-            <UserMenu user={currentUser} />
+            {currentUser && <UserMenu user={currentUser} />}
           </div>
         </header>
       )}
@@ -101,16 +93,16 @@ export default function AppLayout() {
       <main className="container mx-auto px-2 py-1 pb-16">
         <Switch>
           <Route path="/">
-            <ProtectedRoute component={Home} />
+            <Home />
           </Route>
           <Route path="/parcelles">
-            <ProtectedRoute component={Parcelles} />
+            <Parcelles />
           </Route>
           <Route path="/reseaux">
-            <ProtectedRoute component={Reseaux} />
+            <Reseaux />
           </Route>
           <Route path="/history">
-            <ProtectedRoute component={History} />
+            <History />
           </Route>
           <Route>
             <NotFound />
@@ -118,7 +110,7 @@ export default function AppLayout() {
         </Switch>
       </main>
       
-      {!isAuthRoute && currentUser && <Navigation />}
+      {currentUser && <Navigation />}
     </div>
   );
 }

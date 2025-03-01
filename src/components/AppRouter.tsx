@@ -4,46 +4,55 @@ import { Router, Switch, Route } from "wouter";
 import AppLayout from "@/components/AppLayout";
 import { storage } from "@/lib/storage";
 import ResetUsersButton from "@/components/ResetUsersButton";
-import AuthRoutes from "@/components/AuthRoutes";
 import { useHashLocation } from "@/hooks/useHashLocation";
 
 /**
  * Composant principal de routage de l'application
+ * Version simplifiée sans authentification
  */
 export default function AppRouter() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Vérification initiale de l'authentification et redirection
+  // Initialisation sans vérification d'authentification
   useEffect(() => {
-    const checkAuth = async () => {
+    const initApp = async () => {
       try {
-        console.log("AppRouter: Vérification de l'authentification initiale");
+        console.log("AppRouter: Initialisation de l'application");
         
         // Initialisation explicite de la base de données
         const db = await storage.initDB();
         console.log("AppRouter: Base de données initialisée avec succès", db);
         
-        const user = await storage.getCurrentUser();
-        console.log("AppRouter: Utilisateur actuel:", user);
-        
-        // Éviter les redirections automatiques - vérifions l'URL actuelle
-        const currentPath = window.location.hash.slice(1) || "/";
-        console.log("AppRouter: Chemin actuel:", currentPath);
+        // Créer un utilisateur par défaut si aucun n'existe
+        const users = await storage.getUsers();
+        if (users.length === 0) {
+          console.log("AppRouter: Création d'un utilisateur par défaut");
+          const defaultUser = {
+            id: "default-user",
+            name: "Utilisateur",
+            email: "user@example.com"
+          };
+          await storage.saveUser(defaultUser);
+          await storage.setCurrentUser(defaultUser);
+        } else {
+          // Utiliser le premier utilisateur existant
+          await storage.setCurrentUser(users[0]);
+        }
         
         setIsInitialized(true);
         setIsLoading(false);
       } catch (error) {
-        console.error("Erreur lors de la vérification de l'authentification:", error);
+        console.error("Erreur lors de l'initialisation:", error);
         setIsInitialized(true);
         setIsLoading(false);
       }
     };
     
-    checkAuth();
+    initApp();
   }, []);
 
-  // Afficher un état de chargement pendant la vérification
+  // Afficher un état de chargement pendant l'initialisation
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -59,15 +68,6 @@ export default function AppRouter() {
         <ResetUsersButton />
       </div>
       <Switch>
-        <Route path="/auth/login">
-          <AuthRoutes />
-        </Route>
-        <Route path="/auth/register">
-          <AuthRoutes />
-        </Route>
-        <Route path="/auth">
-          <AuthRoutes />
-        </Route>
         <Route path="/:rest*">
           <AppLayout />
         </Route>
