@@ -5,7 +5,6 @@ import { storage } from "@/lib/storage";
 
 interface ProtectedRouteProps {
   component: React.ComponentType<any>;
-  path?: string; // Make path optional since we're not using it anymore
 }
 
 export default function ProtectedRoute({ component: Component }: ProtectedRouteProps) {
@@ -14,12 +13,18 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
 
   useEffect(() => {
     const checkAuth = async () => {
-      const user = await storage.getCurrentUser();
-      if (!user) {
+      try {
+        const user = await storage.getCurrentUser();
+        if (!user) {
+          setLocation('/auth/login');
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
         setLocation('/auth/login');
         setIsAuthenticated(false);
-      } else {
-        setIsAuthenticated(true);
       }
     };
     
@@ -28,7 +33,11 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
 
   if (isAuthenticated === null) {
     // Loading state
-    return <div className="flex justify-center items-center h-screen">Chargement...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin mr-2">&#8635;</div> Chargement...
+      </div>
+    );
   }
 
   if (isAuthenticated === false) {
