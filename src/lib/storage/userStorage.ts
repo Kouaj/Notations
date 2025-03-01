@@ -1,4 +1,3 @@
-
 import { User } from '@/shared/schema';
 import { BaseStorage, STORES, DB_NAME, DB_VERSION } from './core';
 
@@ -116,69 +115,55 @@ export class UserStorage extends BaseStorage {
 
   async clearAllUsers(): Promise<boolean> {
     try {
-      console.log("Starting to clear all users...");
+      console.log("clearAllUsers: Starting to clear all user data");
       
-      // Utiliser les transactions de BaseStorage pour vider les stores
-      try {
-        await this.performTransaction(
-          STORES.CURRENT_USER,
-          'readwrite',
-          store => {
-            console.log("Clearing CURRENT_USER store");
-            return store.clear();
-          }
-        );
-        console.log("Successfully cleared CURRENT_USER store");
-      } catch (error) {
-        console.error("Error clearing CURRENT_USER store:", error);
-      }
+      // 1. Effacer CURRENT_USER store
+      console.log("clearAllUsers: Clearing CURRENT_USER store");
+      await this.performTransaction(
+        STORES.CURRENT_USER,
+        'readwrite',
+        store => store.clear()
+      );
       
-      try {
-        await this.performTransaction(
-          STORES.USERS,
-          'readwrite',
-          store => {
-            console.log("Clearing USERS store");
-            return store.clear();
-          }
-        );
-        console.log("Successfully cleared USERS store");
-      } catch (error) {
-        console.error("Error clearing USERS store:", error);
-      }
+      // 2. Effacer USERS store
+      console.log("clearAllUsers: Clearing USERS store");
+      await this.performTransaction(
+        STORES.USERS,
+        'readwrite',
+        store => store.clear()
+      );
       
-      // Effacer également les mots de passe stockés dans localStorage
-      const keysToRemove = [];
+      // 3. Effacer les mots de passe dans localStorage
+      console.log("clearAllUsers: Clearing user passwords from localStorage");
+      const passwordKeys = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('user_') && key.endsWith('_password')) {
-          keysToRemove.push(key);
+          passwordKeys.push(key);
         }
       }
       
-      // Supprimer les clés collectées (pour éviter les problèmes d'index lors de la suppression)
-      keysToRemove.forEach(key => {
-        console.log("Removing localStorage item:", key);
+      passwordKeys.forEach(key => {
+        console.log(`clearAllUsers: Removing localStorage key: ${key}`);
         localStorage.removeItem(key);
       });
       
-      // Vérifier après effacement
-      const users = await this.getUsers();
+      // 4. Vérifier que tout a été effacé correctement
+      const remainingUsers = await this.getUsers();
       const currentUser = await this.getCurrentUser();
       
-      console.log("After clearing - users count:", users.length);
-      console.log("After clearing - current user exists:", !!currentUser);
-      
-      const success = users.length === 0 && !currentUser;
-      console.log("Clear operation success:", success);
+      const success = remainingUsers.length === 0 && currentUser === null;
+      console.log(`clearAllUsers: Verification - users cleared: ${remainingUsers.length === 0}, current user cleared: ${currentUser === null}`);
       
       if (!success) {
-        console.error("Failed to completely clear users - some data remains");
+        console.error("clearAllUsers: Failed to completely clear users data");
+        return false;
       }
       
-      return success;
+      console.log("clearAllUsers: Successfully cleared all user data");
+      return true;
     } catch (error) {
-      console.error("Error in clearAllUsers:", error);
+      console.error("clearAllUsers: Error while clearing user data:", error);
       return false;
     }
   }
