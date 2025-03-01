@@ -1,11 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useLocation } from 'wouter';
 import { storage } from '@/lib/storage';
-import { User } from '@/shared/schema';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -20,17 +18,17 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const redirectAttempted = useRef(false);
 
   useEffect(() => {
     console.log("Login: Page de connexion chargée");
     const checkCurrentUser = async () => {
       try {
         const user = await storage.getCurrentUser();
-        if (user) {
+        if (user && !redirectAttempted.current) {
           console.log("Login: Utilisateur déjà connecté, redirection vers /");
-          
-          // Si l'utilisateur est déjà connecté, rediriger vers la page d'accueil
-          window.location.href = window.location.origin + window.location.pathname + '#/';
+          redirectAttempted.current = true;
+          setLocation('/');
         }
       } catch (error) {
         console.error("Login: Erreur lors de la vérification de l'utilisateur actuel:", error);
@@ -73,7 +71,6 @@ export default function Login() {
       // Récupérer tous les utilisateurs
       const users = await storage.getUsers();
       console.log("Login: Utilisateurs récupérés:", users.length);
-      console.log("Login: Liste des utilisateurs:", JSON.stringify(users, null, 2));
       
       // Trouver l'utilisateur par email (insensible à la casse)
       const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -98,8 +95,6 @@ export default function Login() {
       const storedPassword = localStorage.getItem(storedPasswordKey);
       
       console.log("Login: Vérification du mot de passe pour userId:", user.id);
-      console.log("Login: Clé du mot de passe:", storedPasswordKey);
-      console.log("Login: Mot de passe stocké existe:", !!storedPassword);
       
       if (hashedPassword === storedPassword) {
         console.log("Login: Mot de passe correct, connexion réussie");
@@ -113,18 +108,9 @@ export default function Login() {
           description: "Vous êtes maintenant connecté"
         });
         
-        // Utiliser le hash pour la redirection (compatible avec GitHub Pages)
-        // Forcer un rechargement complet pour s'assurer que tout l'état est correctement initialisé
-        window.location.href = window.location.origin + window.location.pathname + '#/';
-        
-        // Attendre un court instant avant de recharger pour permettre aux toasts de s'afficher
-        setTimeout(() => {
-          console.log("Login: Redirection vers la page d'accueil...");
-        }, 1000);
+        setLocation('/');
       } else {
         console.log("Login: Mot de passe incorrect");
-        console.log("Login: Mot de passe fourni (hashé):", hashedPassword);
-        console.log("Login: Mot de passe stocké:", storedPassword);
         
         setErrors({ general: "Email ou mot de passe incorrect" });
         toast({

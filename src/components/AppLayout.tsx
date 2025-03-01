@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import Navigation from "@/components/Navigation";
 import UserMenu from "@/components/UserMenu";
@@ -16,6 +16,7 @@ export default function AppLayout() {
   const [location] = useLocation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const checkedAuth = useRef(false);
   
   // Vérifier si la route actuelle est une route d'authentification
   const isAuthRoute = location.startsWith('/auth');
@@ -23,8 +24,11 @@ export default function AppLayout() {
   // Récupérer l'utilisateur actuel
   useEffect(() => {
     const fetchUser = async () => {
+      if (checkedAuth.current) return;
+      
       try {
         console.log("AppLayout: Récupération de l'utilisateur actuel");
+        checkedAuth.current = true;
         
         // Récupérer l'utilisateur depuis le stockage
         const user = await storage.getCurrentUser();
@@ -71,7 +75,7 @@ export default function AppLayout() {
     };
     
     fetchUser();
-  }, []);
+  }, [location]);
   
   // Si toujours en chargement, afficher l'indicateur de chargement avec animation
   if (isLoading) {

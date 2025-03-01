@@ -39,7 +39,7 @@ export default function Register() {
           }
         }
         
-        console.log(`Version de la base de données configurée: ${storage.DB_VERSION}`);
+        // Remove the reference to DB_VERSION which doesn't exist on the storage object
         const user = await storage.getCurrentUser();
         console.log("Register: Vérification de l'utilisateur actuel:", user);
         if (user) {

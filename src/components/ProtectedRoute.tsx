@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { storage } from "@/lib/storage";
 
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ component: Component }: ProtectedRouteProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [, setLocation] = useLocation();
+  const redirectAttempted = useRef(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -24,12 +25,17 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
           console.log("ProtectedRoute: Aucun utilisateur trouvé, redirection vers la connexion");
           setIsAuthenticated(false);
           
-          // Forcer une redirection complète vers la page de connexion
-          window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
-          window.location.reload();
+          // Éviter les redirections en boucle
+          if (!redirectAttempted.current) {
+            redirectAttempted.current = true;
+            
+            // Utiliser setLocation au lieu de manipulation directe de l'URL
+            setLocation('/auth/login');
+          }
         } else {
           console.log("ProtectedRoute: Utilisateur authentifié:", user.name);
           setIsAuthenticated(true);
+          redirectAttempted.current = false;
         }
       } catch (error) {
         console.error("ProtectedRoute: Erreur lors de la vérification de l'authentification:", error);
@@ -39,11 +45,15 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
         if (storedUser) {
           console.log("ProtectedRoute: Utilisateur trouvé dans localStorage");
           setIsAuthenticated(true);
+          redirectAttempted.current = false;
         } else {
           setIsAuthenticated(false);
-          // Forcer une redirection complète vers la page de connexion
-          window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
-          window.location.reload();
+          
+          // Éviter les redirections en boucle
+          if (!redirectAttempted.current) {
+            redirectAttempted.current = true;
+            setLocation('/auth/login');
+          }
         }
       }
     };
