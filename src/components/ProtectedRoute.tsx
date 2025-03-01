@@ -13,12 +13,18 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
 
   useEffect(() => {
     const checkAuth = async () => {
-      const user = await storage.getCurrentUser();
-      if (!user) {
+      try {
+        const user = await storage.getCurrentUser();
+        if (!user) {
+          setLocation('/auth/login');
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error);
         setLocation('/auth/login');
         setIsAuthenticated(false);
-      } else {
-        setIsAuthenticated(true);
       }
     };
     

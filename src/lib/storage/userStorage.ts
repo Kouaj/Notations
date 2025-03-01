@@ -4,42 +4,67 @@ import { BaseStorage, STORES } from './core';
 
 export class UserStorage extends BaseStorage {
   async getUsers(): Promise<User[]> {
-    return this.performTransaction(
-      STORES.USERS,
-      'readonly',
-      store => store.getAll()
-    );
+    try {
+      return this.performTransaction(
+        STORES.USERS,
+        'readonly',
+        store => store.getAll()
+      );
+    } catch (error) {
+      console.error("Error getting users:", error);
+      return [];
+    }
   }
 
   async saveUser(user: User): Promise<void> {
-    await this.performTransaction(
-      STORES.USERS,
-      'readwrite',
-      store => store.put(user)
-    );
+    try {
+      await this.performTransaction(
+        STORES.USERS,
+        'readwrite',
+        store => store.put(user)
+      );
+    } catch (error) {
+      console.error("Error saving user:", error);
+      throw error;
+    }
   }
 
   async getUserById(id: string): Promise<User | null> {
-    return this.performTransaction(
-      STORES.USERS,
-      'readonly',
-      store => store.get(id)
-    );
+    try {
+      return this.performTransaction(
+        STORES.USERS,
+        'readonly',
+        store => store.get(id)
+      );
+    } catch (error) {
+      console.error("Error getting user by ID:", error);
+      return null;
+    }
   }
 
   async getCurrentUser(): Promise<User | null> {
-    return this.performTransaction(
-      STORES.CURRENT_USER,
-      'readonly',
-      store => store.get('current')
-    );
+    try {
+      return this.performTransaction(
+        STORES.CURRENT_USER,
+        'readonly',
+        store => store.get('current')
+      );
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      return null;
+    }
   }
 
   async setCurrentUser(user: User | null): Promise<void> {
-    await this.performTransaction(
-      STORES.CURRENT_USER,
-      'readwrite',
-      store => store.put(user, 'current')
-    );
+    try {
+      await this.performTransaction(
+        STORES.CURRENT_USER,
+        'readwrite',
+        store => store.put(user, 'current')
+      );
+    } catch (error) {
+      console.error("Error setting current user:", error);
+      throw error;
+    }
   }
 }

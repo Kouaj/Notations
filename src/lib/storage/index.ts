@@ -28,16 +28,30 @@ class IndexedDBStorage implements IDBStorage {
   }
 
   async getCurrentUser() {
-    return this.userStorage.getCurrentUser();
+    try {
+      return await this.userStorage.getCurrentUser();
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      return null;
+    }
   }
 
   async setCurrentUser(user: User | null) {
-    return this.userStorage.setCurrentUser(user);
+    try {
+      return await this.userStorage.setCurrentUser(user);
+    } catch (error) {
+      console.error("Error setting current user:", error);
+    }
   }
 
   // Réseau methods
   async getReseaux() {
-    return this.reseauStorage.getReseaux();
+    try {
+      return await this.reseauStorage.getReseaux();
+    } catch (error) {
+      console.error("Error getting reseaux:", error);
+      return [];
+    }
   }
 
   async getReseauxByUser(userId: string) {
@@ -62,12 +76,22 @@ class IndexedDBStorage implements IDBStorage {
   }
 
   async getSelectedReseau() {
-    return this.reseauStorage.getSelectedReseau();
+    try {
+      return await this.reseauStorage.getSelectedReseau();
+    } catch (error) {
+      console.error("Error getting selected reseau:", error);
+      return null;
+    }
   }
 
   // Parcelle methods
   async getParcelles() {
-    return this.parcelleStorage.getParcelles();
+    try {
+      return await this.parcelleStorage.getParcelles();
+    } catch (error) {
+      console.error("Error getting parcelles:", error);
+      return [];
+    }
   }
 
   async getParcellesByUser(userId: string) {
@@ -96,12 +120,22 @@ class IndexedDBStorage implements IDBStorage {
   }
 
   async getSelectedParcelle() {
-    return this.parcelleStorage.getSelectedParcelle();
+    try {
+      return await this.parcelleStorage.getSelectedParcelle();
+    } catch (error) {
+      console.error("Error getting selected parcelle:", error);
+      return null;
+    }
   }
 
   // History methods
   async getHistory() {
-    return this.historyStorage.getHistory();
+    try {
+      return await this.historyStorage.getHistory();
+    } catch (error) {
+      console.error("Error getting history:", error);
+      return [];
+    }
   }
 
   async getHistoryByUser(userId: string) {
