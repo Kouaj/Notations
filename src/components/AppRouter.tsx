@@ -6,7 +6,7 @@ import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import { storage } from "@/lib/storage";
 
-// Configuration for wouter to work with GitHub Pages
+// Configuration pour wouter afin qu'il fonctionne avec GitHub Pages
 export const useHashLocation = () => {
   const [loc, setLoc] = React.useState(window.location.hash.slice(1) || "/");
 
@@ -17,7 +17,7 @@ export const useHashLocation = () => {
     };
 
     window.addEventListener("hashchange", handler);
-    handler(); // Initialize with current hash
+    handler(); // Initialiser avec le hash actuel
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
@@ -31,11 +31,11 @@ export const useHashLocation = () => {
 export default function AppRouter() {
   const [, setLocation] = useLocation();
   
-  // Check authentication status on initial load
+  // Vérification de l'authentification au chargement initial
   useEffect(() => {
     const checkAuth = async () => {
       const user = await storage.getCurrentUser();
-      // If no user is logged in, redirect to login page
+      // Si aucun utilisateur n'est connecté, rediriger vers la page de connexion
       if (!user) {
         setLocation('/auth/login');
       }
@@ -53,17 +53,32 @@ export default function AppRouter() {
         <Route path="/auth/register">
           <Register />
         </Route>
+        {/* Route par défaut pour /auth qui redirige vers /auth/login */}
         <Route path="/auth">
           {() => {
-            const [, setLocation] = useLocation();
             useEffect(() => {
               setLocation('/auth/login');
-            }, [setLocation]);
+            }, []);
             return null;
           }}
         </Route>
-        <Route>
-          <AppLayout />
+        {/* Route principale qui inclut la mise en page de l'application */}
+        <Route path="/:rest*">
+          {(params) => {
+            // Si on est sur la racine, vérifier l'authentification
+            if (!params.rest) {
+              useEffect(() => {
+                const checkRootAuth = async () => {
+                  const user = await storage.getCurrentUser();
+                  if (!user) {
+                    setLocation('/auth/login');
+                  }
+                };
+                checkRootAuth();
+              }, []);
+            }
+            return <AppLayout />;
+          }}
         </Route>
       </Switch>
     </Router>

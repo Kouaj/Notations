@@ -16,7 +16,7 @@ import { UserIcon, LogOutIcon, ChevronDownIcon } from 'lucide-react';
 
 export default function UserMenu() {
   const [user, setUser] = useState<User | null>(null);
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +46,7 @@ export default function UserMenu() {
         description: "Vous avez été déconnecté avec succès"
       });
       
-      setLocation('/auth/login');
+      navigate('/auth/login');
     } catch (error) {
       console.error("Logout error:", error);
       toast({
@@ -64,10 +64,10 @@ export default function UserMenu() {
   if (!user) {
     return (
       <div className="flex gap-2">
-        <Button variant="outline" onClick={() => setLocation('/auth/login')}>
+        <Button variant="outline" onClick={() => navigate('/auth/login')}>
           Connexion
         </Button>
-        <Button onClick={() => setLocation('/auth/register')}>
+        <Button onClick={() => navigate('/auth/register')}>
           Inscription
         </Button>
       </div>

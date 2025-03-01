@@ -15,6 +15,7 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
     const checkAuth = async () => {
       const user = await storage.getCurrentUser();
       if (!user) {
+        // Redirection vers la page de connexion
         setLocation('/auth/login');
         setIsAuthenticated(false);
       } else {
@@ -26,12 +27,12 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
   }, [setLocation]);
 
   if (isAuthenticated === null) {
-    // Loading state
+    // État de chargement
     return <div className="flex justify-center items-center h-screen">Chargement...</div>;
   }
 
   if (isAuthenticated === false) {
-    return null; // Redirect is handled in useEffect
+    return null; // La redirection est gérée dans useEffect
   }
 
   return <Component />;
