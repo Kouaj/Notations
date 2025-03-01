@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useCallback } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { storage } from "@/lib/storage";
-import { useRouter } from "wouter";
+import { useLocation } from "wouter";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -26,48 +25,40 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CancelDialog } from "./CancelDialog";
-import { HistoryRecord } from "@/shared/schema";
+import { HistoryRecord, NotationType, PartiePlante } from "@/shared/schema";
 
 const formSchema = z.object({
-  parcelId: z.string().min(2, {
-    message: "L'identifiant de la parcelle doit comporter au moins 2 caractères.",
-  }),
+  parcelId: z.number(),
   date: z.string().min(1, {
     message: "La date est obligatoire.",
   }),
-  soilType: z.string().min(1, {
-    message: "Le type de sol est obligatoire.",
-  }),
-  cropType: z.string().min(1, {
-    message: "Le type de culture est obligatoire.",
-  }),
-  yieldEstimate: z.string().optional(),
-  notes: z.string().optional(),
+  type: z.enum(["maladie", "pheno", "ravageur", "recouvrement", "analyse_sols", "vers_terre", "pollinisateur", "pot_barber", "commentaire"] as const),
+  partie: z.enum(["feuilles", "grappe"] as const),
+  commentaire: z.string().optional(),
 });
 
 interface NotationFormProps {
   onCancel: () => void;
-  parcelId?: string;
+  parcelleId?: number;
   onNotationSaved: (newNotation: HistoryRecord) => void;
 }
 
 type FormState = z.infer<typeof formSchema>;
 
-export function NotationForm({ onCancel, parcelId, onNotationSaved }: NotationFormProps) {
+export function NotationForm({ onCancel, parcelleId, onNotationSaved }: NotationFormProps) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const { toast } = useToast();
-  const [, navigate] = useRouter();
+  const [, navigate] = useLocation();
   const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<FormState>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      parcelId: parcelId || '',
+      parcelId: parcelleId || 0,
       date: new Date().toISOString().split('T')[0],
-      soilType: '',
-      cropType: '',
-      yieldEstimate: '',
-      notes: '',
+      type: "maladie" as NotationType,
+      partie: "feuilles" as PartiePlante,
+      commentaire: '',
     },
     mode: "onChange",
   });
@@ -85,17 +76,35 @@ export function NotationForm({ onCancel, parcelId, onNotationSaved }: NotationFo
         return;
       }
 
+      // Récupérer les informations de parcelle et réseau
+      const selectedParcelle = await storage.getSelectedParcelle();
+      const selectedReseau = await storage.getSelectedReseau();
+
+      if (!selectedParcelle || !selectedReseau) {
+        toast({
+          title: "Erreur",
+          description: "Parcelle ou réseau non sélectionné.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const newNotation: HistoryRecord = {
-        id: Math.random().toString(36).substring(7),
-        parcelId: values.parcelId,
-        date: new Date(values.date).getTime(),
-        soilType: values.soilType,
-        cropType: values.cropType,
-        yieldEstimate: values.yieldEstimate || "N/A",
-        notes: values.notes || "N/A",
+        id: Date.now(),
+        parcelleName: selectedParcelle.name,
+        parcelleId: selectedParcelle.id,
+        reseauName: selectedReseau.name,
+        reseauId: selectedReseau.id,
+        placetteId: 0, // À définir correctement
+        notes: [],
+        count: 0,
+        frequency: {},
+        intensity: {},
+        type: values.type,
+        partie: values.partie,
+        date: values.date,
         userId: user.id,
-        userName: user.name || "N/A",
-        timestamp: Date.now(),
+        commentaire: values.commentaire
       };
 
       await storage.saveNotation(newNotation);
@@ -139,20 +148,6 @@ export function NotationForm({ onCancel, parcelId, onNotationSaved }: NotationFo
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <FormField
             control={form.control}
-            name="parcelId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Identifiant de la parcelle</FormLabel>
-                <FormControl>
-                  <Input placeholder="ID de la parcelle" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="date"
             render={({ field }) => (
               <FormItem>
@@ -167,22 +162,26 @@ export function NotationForm({ onCancel, parcelId, onNotationSaved }: NotationFo
 
           <FormField
             control={form.control}
-            name="soilType"
+            name="type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Type de sol</FormLabel>
+                <FormLabel>Type de notation</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un type de sol" />
+                      <SelectValue placeholder="Sélectionner un type" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="argileux">Argileux</SelectItem>
-                    <SelectItem value="limoneux">Limoneux</SelectItem>
-                    <SelectItem value="sableux">Sableux</SelectItem>
-                    <SelectItem value="tourbeux">Tourbeux</SelectItem>
-                    <SelectItem value="calcaire">Calcaire</SelectItem>
+                    <SelectItem value="maladie">Maladie</SelectItem>
+                    <SelectItem value="pheno">Phénologie</SelectItem>
+                    <SelectItem value="ravageur">Ravageur</SelectItem>
+                    <SelectItem value="recouvrement">Recouvrement</SelectItem>
+                    <SelectItem value="analyse_sols">Analyse des sols</SelectItem>
+                    <SelectItem value="vers_terre">Vers de terre</SelectItem>
+                    <SelectItem value="pollinisateur">Pollinisateur</SelectItem>
+                    <SelectItem value="pot_barber">Pot Barber</SelectItem>
+                    <SelectItem value="commentaire">Commentaire</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -192,22 +191,19 @@ export function NotationForm({ onCancel, parcelId, onNotationSaved }: NotationFo
 
           <FormField
             control={form.control}
-            name="cropType"
+            name="partie"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Type de culture</FormLabel>
+                <FormLabel>Partie de la plante</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un type de culture" />
+                      <SelectValue placeholder="Sélectionner une partie" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="mais">Maïs</SelectItem>
-                    <SelectItem value="ble">Blé</SelectItem>
-                    <SelectItem value="soja">Soja</SelectItem>
-                    <SelectItem value="orge">Orge</SelectItem>
-                    <SelectItem value="tournesol">Tournesol</SelectItem>
+                    <SelectItem value="feuilles">Feuilles</SelectItem>
+                    <SelectItem value="grappe">Grappe</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -217,23 +213,10 @@ export function NotationForm({ onCancel, parcelId, onNotationSaved }: NotationFo
 
           <FormField
             control={form.control}
-            name="yieldEstimate"
+            name="commentaire"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estimation du rendement</FormLabel>
-                <FormControl>
-                  <Input placeholder="Estimation du rendement" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes</FormLabel>
+                <FormLabel>Commentaire</FormLabel>
                 <FormControl>
                   <Textarea
                     placeholder="Informations complémentaires"

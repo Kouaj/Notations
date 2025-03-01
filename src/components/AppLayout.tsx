@@ -1,20 +1,15 @@
 
-import { Outlet } from "wouter";
-import { Navigation } from "./Navigation";
-import UserMenu from "./UserMenu";
-import { Toaster } from "@/components/ui/toaster";
+import React from "react";
+import { Route, Switch } from "wouter";
+import { Sidebar } from "@/components/ui/sidebar";
 
-export function AppLayout() {
+export function AppLayout({ children }) {
   return (
-    <div>
-      <div className="relative">
-        <Navigation />
-        <UserMenu />
-      </div>
-      <div className="container mx-auto my-6">
-        <Outlet />
-      </div>
-      <Toaster />
+    <div className="flex h-screen bg-background">
+      <Sidebar className="w-64 border-r" />
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
     </div>
   );
 }

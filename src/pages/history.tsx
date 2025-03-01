@@ -1,26 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { HistoryGroup } from "@/shared/schema";
+import { HistoryGroup, HistoryRecord } from "@/shared/schema";
 import { storage } from "@/lib/storage";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-interface HistoryRecord {
-  parcelleName: string;
-  date: string;
-  type: string;
-  partie: string;
-  frequency: Record<string, number>;
-  intensity: Record<string, number>;
-  commentaire?: string;
-  fait?: boolean;
-  hauteurIR?: number;
-  hauteurCavaillon?: number;
-  nbVDT?: number;
-}
 
 const groupHistoryByDate = (history: HistoryRecord[]) => {
   const grouped: { [key: string]: HistoryGroup } = {};
@@ -33,7 +20,7 @@ const groupHistoryByDate = (history: HistoryRecord[]) => {
     if (!grouped[key]) {
       grouped[key] = {
         parcelleName: record.parcelleName,
-        parcelleId: 0, // You might want to populate this with the actual parcelleId
+        parcelleId: record.parcelleId,
         date: date,
         formattedDate: formattedDate,
         records: []

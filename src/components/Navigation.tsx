@@ -1,59 +1,51 @@
 
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 import { storage } from "@/lib/storage";
-import { User } from "@/shared/schema";
+
+// Pour l'implémentation simplifiée, on va retirer la vérification isAdmin
 
 export function Navigation() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [location] = useLocation();
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const currentUser = await storage.getCurrentUser();
-      setUser(currentUser);
-      
-      if (currentUser) {
-        const adminCheck = await storage.isAdmin(currentUser);
-        setIsAdmin(adminCheck);
-      }
+    const loadUser = async () => {
+      const user = await storage.getCurrentUser();
+      setCurrentUser(user);
     };
-    
-    checkAuth();
+    loadUser();
   }, []);
 
-  if (!user) return null;
-
   return (
-    <nav className="flex items-center space-x-4 lg:space-x-6 mb-8">
-      <Link href="/">
-        <a className={`text-sm font-medium transition-colors hover:text-primary ${location === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
-          Accueil
-        </a>
-      </Link>
-      <Link href="/reseaux">
-        <a className={`text-sm font-medium transition-colors hover:text-primary ${location.includes('/reseaux') ? 'text-primary' : 'text-muted-foreground'}`}>
-          Réseaux
-        </a>
-      </Link>
-      <Link href="/parcelles">
-        <a className={`text-sm font-medium transition-colors hover:text-primary ${location.includes('/parcelles') ? 'text-primary' : 'text-muted-foreground'}`}>
-          Parcelles
-        </a>
-      </Link>
-      <Link href="/history">
-        <a className={`text-sm font-medium transition-colors hover:text-primary ${location.includes('/history') ? 'text-primary' : 'text-muted-foreground'}`}>
-          Historique
-        </a>
-      </Link>
-      {isAdmin && (
-        <Link href="/admin">
-          <a className={`text-sm font-medium transition-colors hover:text-primary ${location.includes('/admin') ? 'text-primary' : 'text-muted-foreground'}`}>
-            Admin
-          </a>
+    <nav className="flex items-center p-4 border-b">
+      <div className="flex space-x-4 items-center">
+        <Link href="/">
+          <Button variant={location === "/" ? "default" : "ghost"}>
+            Accueil
+          </Button>
         </Link>
-      )}
+        {currentUser && (
+          <>
+            <Link href="/reseaux">
+              <Button variant={location === "/reseaux" ? "default" : "ghost"}>
+                Réseaux
+              </Button>
+            </Link>
+            <Link href="/parcelles">
+              <Button variant={location === "/parcelles" ? "default" : "ghost"}>
+                Parcelles
+              </Button>
+            </Link>
+            <Link href="/history">
+              <Button variant={location === "/history" ? "default" : "ghost"}>
+                Historique
+              </Button>
+            </Link>
+          </>
+        )}
+      </div>
     </nav>
   );
 }
