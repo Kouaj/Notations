@@ -66,7 +66,7 @@ export default function AppRouter() {
         <Route path="/:rest*">
           {(params) => {
             // Si on est sur la racine, vérifier l'authentification
-            if (!params.rest) {
+            if (params && !params.rest) {
               useEffect(() => {
                 const checkRootAuth = async () => {
                   const user = await storage.getCurrentUser();
