@@ -64,7 +64,7 @@ export default function AppRouter() {
         </Route>
         {/* Route principale qui inclut la mise en page de l'application */}
         <Route path="/:rest*">
-          {(params) => {
+          {(params: { rest?: string }) => {
             // Si on est sur la racine, vérifier l'authentification
             if (params && params.rest === undefined) {
               useEffect(() => {
