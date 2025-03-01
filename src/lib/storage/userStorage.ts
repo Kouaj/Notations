@@ -69,7 +69,7 @@ export class UserStorage extends BaseStorage {
     }
   }
 
-  async clearAllUsers(): Promise<void> {
+  async clearAllUsers(): Promise<boolean> {
     try {
       console.log("Clearing all users from database...");
       // Vider la table des utilisateurs
@@ -85,9 +85,10 @@ export class UserStorage extends BaseStorage {
         store => store.clear()
       );
       console.log("All users have been cleared successfully");
+      return true; // Ajout du retour explicite pour indiquer que l'opération a réussi
     } catch (error) {
       console.error("Error clearing users:", error);
-      throw error;
+      return false; // Ajout du retour false en cas d'erreur
     }
   }
 }
