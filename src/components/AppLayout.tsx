@@ -15,6 +15,7 @@ import { User } from "@/shared/schema";
 export default function AppLayout() {
   const [location] = useLocation();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Check if current route is an auth route
   const isAuthRoute = location.startsWith('/auth');
@@ -22,14 +23,25 @@ export default function AppLayout() {
   // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
-      const user = await storage.getCurrentUser();
-      setCurrentUser(user);
+      try {
+        console.log("AppLayout: Fetching current user");
+        const user = await storage.getCurrentUser();
+        console.log("AppLayout: Current user:", user);
+        setCurrentUser(user);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("AppLayout: Error fetching user:", error);
+        setIsLoading(false);
+      }
     };
     
-    if (!isAuthRoute) {
-      fetchUser();
-    }
-  }, [isAuthRoute]);
+    fetchUser();
+  }, []);
+  
+  // If still loading, show loading indicator
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">Chargement de l'application...</div>;
+  }
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
@@ -44,7 +56,7 @@ export default function AppLayout() {
       
       <main className="container mx-auto px-2 py-1 pb-16">
         <Switch>
-          <Route path="/">
+          <Route path="/" exact>
             {() => <ProtectedRoute component={Home} />}
           </Route>
           <Route path="/parcelles">
@@ -56,7 +68,9 @@ export default function AppLayout() {
           <Route path="/history">
             {() => <ProtectedRoute component={History} />}
           </Route>
-          {!isAuthRoute && <Route component={NotFound} />}
+          <Route>
+            <NotFound />
+          </Route>
         </Switch>
       </main>
       

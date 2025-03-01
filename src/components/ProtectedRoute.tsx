@@ -14,17 +14,22 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log("Checking authentication...");
         const user = await storage.getCurrentUser();
+        console.log("Auth check result:", user);
+        
         if (!user) {
-          setLocation('/auth/login');
+          console.log("No user found, redirecting to login");
           setIsAuthenticated(false);
+          setLocation('/auth/login');
         } else {
+          console.log("User authenticated:", user.name);
           setIsAuthenticated(true);
         }
       } catch (error) {
         console.error("Error checking authentication:", error);
-        setLocation('/auth/login');
         setIsAuthenticated(false);
+        setLocation('/auth/login');
       }
     };
     
@@ -37,8 +42,10 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
   }
 
   if (isAuthenticated === false) {
-    return null; // Redirect is handled in useEffect
+    // We'll let the redirect happen
+    return null;
   }
 
+  // Only render the component if authenticated
   return <Component />;
 }
