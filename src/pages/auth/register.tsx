@@ -29,6 +29,7 @@ export default function Register() {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    general?: string;
   }>({});
   
   const { toast } = useToast();
@@ -81,18 +82,20 @@ export default function Register() {
     }
 
     setIsLoading(true);
+    setErrors({});
+    
     try {
       // Vérifier la base de données avant de créer l'utilisateur
       console.log("Register: Vérification des utilisateurs existants");
-      const dbBeforeUsers = await storage.getUsers();
-      console.log("Register: Utilisateurs en base avant inscription:", dbBeforeUsers);
+      const existingUsers = await storage.getUsers();
+      console.log("Register: Utilisateurs en base avant inscription:", existingUsers);
       
       // Check if email already exists
-      const users = await storage.getUsers();
-      const emailExists = users.some(u => u.email === email);
+      const emailExists = existingUsers.some(u => u.email === email);
       
       if (emailExists) {
         console.log("Register: Email déjà utilisé");
+        setErrors({ email: "Cet email est déjà utilisé" });
         toast({
           title: "Erreur d'inscription",
           description: "Cet email est déjà utilisé",
@@ -102,7 +105,7 @@ export default function Register() {
         return;
       }
       
-      // Create new user
+      // Create new user with all required fields
       const id = crypto.randomUUID();
       const newUser: User = {
         id,
@@ -113,12 +116,14 @@ export default function Register() {
       console.log("Register: Création d'un nouvel utilisateur:", newUser);
       
       // Save user to database with explicit try/catch for debugging
+      let savedUser;
       try {
         console.log("Register: Tentative de sauvegarde de l'utilisateur");
-        const savedUser = await storage.saveUser(newUser);
+        savedUser = await storage.saveUser(newUser);
         console.log("Register: Utilisateur sauvegardé avec succès:", savedUser);
       } catch (saveError) {
         console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
+        setErrors({ general: "Erreur lors de la sauvegarde de l'utilisateur" });
         throw saveError;
       }
       
@@ -126,8 +131,15 @@ export default function Register() {
       const dbAfterUsers = await storage.getUsers();
       console.log("Register: Utilisateurs en base après inscription:", dbAfterUsers);
       
+      // Vérifier que l'utilisateur est bien dans la base
+      const userSaved = dbAfterUsers.some(u => u.id === id);
+      if (!userSaved) {
+        console.error("Register: L'utilisateur n'a pas été sauvegardé correctement");
+        setErrors({ general: "L'utilisateur n'a pas été sauvegardé correctement" });
+        throw new Error("L'utilisateur n'a pas été sauvegardé correctement");
+      }
+      
       // For demo purposes only - in real app, NEVER store passwords client-side
-      // This is only for demonstration and should be replaced with proper authentication
       localStorage.setItem(`user_${id}_password`, btoa(password));
       
       // Set as current user
@@ -144,19 +156,25 @@ export default function Register() {
       const currentUser = await storage.getCurrentUser();
       console.log("Register: Utilisateur courant après inscription:", currentUser);
       
+      if (!currentUser) {
+        console.error("Register: L'utilisateur courant n'a pas été défini correctement");
+        throw new Error("L'utilisateur courant n'a pas été défini correctement");
+      }
+      
       console.log("Register: Inscription réussie");
       toast({
         title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès"
+        description: "Votre compte a été créé avec succès. Redirection en cours..."
       });
       
-      // Ajouter un délai pour s'assurer que le currentUser est bien enregistré
+      // Redirection avec un délai pour s'assurer que tout est enregistré
       setTimeout(() => {
         console.log("Register: Redirection vers la page d'accueil");
         setLocation('/');
       }, 1500);
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Register: Erreur lors de l'inscription:", error);
+      setErrors(prev => ({ ...prev, general: "Une erreur s'est produite lors de l'inscription" }));
       toast({
         title: "Erreur",
         description: "Une erreur s'est produite lors de l'inscription. Veuillez réessayer.",
@@ -171,6 +189,12 @@ export default function Register() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-purple-50 to-white py-12 px-4">
       <div className="w-full max-w-md px-8 py-10 bg-white rounded-lg shadow-md">
         <h1 className="text-2xl font-bold text-center mb-6 text-purple-800">Inscription</h1>
+        
+        {errors.general && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {errors.general}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

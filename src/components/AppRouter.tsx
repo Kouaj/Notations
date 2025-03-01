@@ -45,38 +45,48 @@ export const useHashLocation = (): [string, (to: string) => void] => {
 // Composant pour réinitialiser les utilisateurs
 function ResetUsersButton() {
   const { toast } = useToast();
+  const [isResetting, setIsResetting] = useState(false);
   
   const handleReset = async () => {
+    if (isResetting) return; // Éviter les clics multiples
+    
     try {
-      console.log("Tentative de réinitialisation des utilisateurs...");
-      // Récupérer les utilisateurs avant suppression pour déboguer
+      setIsResetting(true);
+      console.log("Début de la réinitialisation des utilisateurs...");
+      
+      // Première étape - vérifier les utilisateurs existants
       const usersBefore = await storage.getUsers();
       console.log("Utilisateurs avant réinitialisation:", usersBefore);
       
-      // Effacer les utilisateurs
+      // Effacer tous les utilisateurs
       const success = await storage.clearAllUsers();
       console.log("Résultat de la réinitialisation:", success);
       
-      // Vérifier que les utilisateurs ont bien été supprimés
+      // Vérifier après effacement
       const usersAfter = await storage.getUsers();
       console.log("Utilisateurs après réinitialisation:", usersAfter);
       
       if (success && usersAfter.length === 0) {
         toast({
           title: "Réinitialisation réussie",
-          description: "Tous les utilisateurs ont été supprimés",
+          description: "Tous les utilisateurs ont été supprimés. Redirection en cours..."
         });
         
-        // Rediriger vers la page de connexion avec un délai
+        // Nettoyer tout le localStorage également
+        localStorage.clear();
+        
+        // Attendre un peu avant de rediriger
         setTimeout(() => {
           console.log("Redirection vers la page de connexion...");
           window.location.hash = "#/auth/login";
-          window.location.reload(); // Recharger la page pour s'assurer que tout est réinitialisé
-        }, 2000);
+          // Force reload pour s'assurer que tout est nettoyé
+          setTimeout(() => window.location.reload(), 100);
+        }, 1500);
       } else {
+        console.error("La réinitialisation n'a pas fonctionné comme prévu");
         toast({
           title: "Erreur",
-          description: "Une erreur s'est produite lors de la réinitialisation ou pas tous les utilisateurs n'ont pas été supprimés",
+          description: "La réinitialisation n'a pas complètement fonctionné. Veuillez réessayer.",
           variant: "destructive"
         });
       }
@@ -87,6 +97,8 @@ function ResetUsersButton() {
         description: "Une erreur s'est produite lors de la réinitialisation",
         variant: "destructive"
       });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -96,8 +108,9 @@ function ResetUsersButton() {
         variant="destructive" 
         onClick={handleReset}
         size="sm"
+        disabled={isResetting}
       >
-        Réinitialiser tous les utilisateurs
+        {isResetting ? "Réinitialisation..." : "Réinitialiser tous les utilisateurs"}
       </Button>
     </div>
   );

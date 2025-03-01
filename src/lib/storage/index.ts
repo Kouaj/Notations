@@ -15,14 +15,37 @@ class IndexedDBStorage implements IDBStorage {
 
   // User methods
   async getUsers() {
-    return this.userStorage.getUsers();
+    try {
+      console.log("Storage interface: Getting users");
+      const users = await this.userStorage.getUsers();
+      console.log("Storage interface: Retrieved users:", users);
+      return users;
+    } catch (error) {
+      console.error("Error getting users:", error);
+      return [];
+    }
   }
 
   async saveUser(user: User) {
     try {
+      if (!user || !user.id || !user.email || !user.name) {
+        console.error("Storage interface: Invalid user data provided:", user);
+        throw new Error("Invalid user data - Missing required fields");
+      }
+      
       console.log("Storage interface: Saving user", user);
       const savedUser = await this.userStorage.saveUser(user);
       console.log("Storage interface: User saved successfully", savedUser);
+      
+      // Vérifions que l'utilisateur a bien été sauvegardé
+      const users = await this.getUsers();
+      const userExists = users.some(u => u.id === user.id);
+      
+      if (!userExists) {
+        console.error("Storage interface: User was not saved properly in the database");
+        throw new Error("User was not saved properly");
+      }
+      
       return savedUser;
     } catch (error) {
       console.error("Error in storage interface while saving user:", error);
@@ -31,11 +54,20 @@ class IndexedDBStorage implements IDBStorage {
   }
 
   async getUserById(id: string) {
-    return this.userStorage.getUserById(id);
+    try {
+      console.log("Storage interface: Getting user by ID", id);
+      const user = await this.userStorage.getUserById(id);
+      console.log("Storage interface: Retrieved user by ID:", user);
+      return user;
+    } catch (error) {
+      console.error("Error getting user by ID:", error);
+      return null;
+    }
   }
 
   async getCurrentUser() {
     try {
+      console.log("Storage interface: Getting current user");
       const user = await this.userStorage.getCurrentUser();
       console.log("Storage interface: Current user", user);
       return user;
@@ -49,9 +81,20 @@ class IndexedDBStorage implements IDBStorage {
     try {
       console.log("Storage interface: Setting current user", user);
       await this.userStorage.setCurrentUser(user);
+      
+      // Vérifiez que l'utilisateur actuel a été correctement défini
+      if (user) {
+        const currentUser = await this.getCurrentUser();
+        if (!currentUser || currentUser.id !== user.id) {
+          console.error("Storage interface: Current user was not set properly");
+          throw new Error("Current user was not set properly");
+        }
+      }
+      
       console.log("Storage interface: Current user set successfully");
     } catch (error) {
       console.error("Error setting current user:", error);
+      throw error;
     }
   }
 
@@ -59,6 +102,18 @@ class IndexedDBStorage implements IDBStorage {
     try {
       console.log("Storage interface: Clearing all users");
       const result = await this.userStorage.clearAllUsers();
+      
+      // Vérifions que les utilisateurs ont bien été supprimés
+      const users = await this.getUsers();
+      const currentUser = await this.getCurrentUser();
+      
+      if (users.length > 0 || currentUser !== null) {
+        console.error("Storage interface: Not all users were cleared properly");
+        console.log("Remaining users:", users);
+        console.log("Current user after clear:", currentUser);
+        return false;
+      }
+      
       console.log("Storage interface: All users cleared, result:", result);
       return result;
     } catch (error) {
