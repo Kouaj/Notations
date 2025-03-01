@@ -1,7 +1,7 @@
 
 // Core IndexedDB functionality
 export const DB_NAME = 'agricultureDB';
-export const DB_VERSION = 4;
+export const DB_VERSION = 5; // Updated from 4 to 5
 export const STORES = {
   USERS: 'users',
   RESEAUX: 'reseaux',
