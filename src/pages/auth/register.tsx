@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -51,14 +50,12 @@ export default function Register() {
     console.log("Register: Page d'inscription chargée");
     const checkCurrentUser = async () => {
       try {
-        // Vérification de la dernière réinitialisation
         const lastReset = localStorage.getItem('db_reset_timestamp');
         if (lastReset) {
           const resetTime = parseInt(lastReset);
           const currentTime = Date.now();
           if ((currentTime - resetTime) < 5000) {
             console.log("Base de données récemment réinitialisée, attente...");
-            // On attend un peu pour s'assurer que tout est bien initialisé
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
@@ -110,12 +107,7 @@ export default function Register() {
     setErrors({});
     
     try {
-      // Vérification des utilisateurs existants
-      console.log("Register: Vérification des utilisateurs existants");
       const existingUsers = await storage.getUsers();
-      console.log("Register: Utilisateurs en base avant inscription:", existingUsers);
-      
-      // Check if email already exists
       const emailExists = existingUsers.some(u => u.email === email);
       
       if (emailExists) {
@@ -130,7 +122,6 @@ export default function Register() {
         return;
       }
       
-      // Create new user with all required fields
       const id = crypto.randomUUID();
       const newUser: User = {
         id,
@@ -140,19 +131,16 @@ export default function Register() {
       
       console.log(`Register: Création d'un nouvel utilisateur avec version DB ${DB_VERSION}:`, newUser);
       
-      // Stockage du mot de passe simplifié en base64 (pour démo seulement)
       const hashedPassword = btoa(password);
       localStorage.setItem(`user_${id}_password`, hashedPassword);
       console.log("Register: Mot de passe stocké dans localStorage avec clé:", `user_${id}_password`);
       console.log("Register: Mot de passe hashé:", hashedPassword);
       
-      // Sauvegarde de l'utilisateur
       try {
         console.log("Register: Tentative de sauvegarde de l'utilisateur");
         const savedUser = await storage.saveUser(newUser);
         console.log("Register: Utilisateur sauvegardé avec succès:", savedUser);
         
-        // Vérification immédiate
         const verifiedUser = await storage.getUserById(id);
         console.log("Register: Vérification de la sauvegarde:", verifiedUser);
         
@@ -166,18 +154,17 @@ export default function Register() {
           variant: "success"
         });
         
-        // Redirection vers la page de connexion après l'inscription
+        console.log("Register: Préparation de la redirection vers la page de connexion");
+        
         setTimeout(() => {
-          console.log("Register: Redirection vers la page de connexion");
-          // On utilise le hash pour la redirection compatible avec GitHub Pages
-          window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
+          console.log("Register: Redirection vers la page de connexion (hash routing)");
+          window.location.hash = "#/auth/login";
+          window.dispatchEvent(new HashChangeEvent("hashchange"));
         }, 1500);
       } catch (saveError: any) {
         console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
-        // Nettoyage en cas d'erreur
         localStorage.removeItem(`user_${id}_password`);
         
-        // Vérifier si c'est une erreur de version
         const errorMessage = saveError.message || "Erreur inconnue";
         if (errorMessage.includes("version")) {
           console.warn("⚠️ Erreur de version détectée, tentative de récupération...");
@@ -189,14 +176,11 @@ export default function Register() {
               description: "La base de données a été réinitialisée. Veuillez réessayer.",
               variant: "default"
             });
-            
-            // Attendre un peu avant de recharger
             setTimeout(() => window.location.reload(), 2000);
             return;
           }
         }
         
-        // Stocker les détails de l'erreur pour affichage
         console.error("Détails de l'erreur:", errorMessage);
         setErrorDetails(`Erreur de sauvegarde: ${errorMessage}`);
         setShowErrorDialog(true);
@@ -232,7 +216,6 @@ export default function Register() {
           description: "Toutes les données utilisateur ont été effacées",
           variant: "success"
         });
-        // Attendre un peu avant de recharger
         setTimeout(() => window.location.reload(), 1000);
       } else {
         console.error("Échec de la réinitialisation de la base de données");
