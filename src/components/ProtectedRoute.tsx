@@ -14,20 +14,20 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log("Checking authentication...");
+        console.log("Vérification de l'authentification...");
         const user = await storage.getCurrentUser();
-        console.log("Auth check result:", user);
+        console.log("Résultat de la vérification d'authentification:", user);
         
         if (!user) {
-          console.log("No user found, redirecting to login");
+          console.log("Aucun utilisateur trouvé, redirection vers la connexion");
           setIsAuthenticated(false);
           setLocation('/auth/login');
         } else {
-          console.log("User authenticated:", user.name);
+          console.log("Utilisateur authentifié:", user.name);
           setIsAuthenticated(true);
         }
       } catch (error) {
-        console.error("Error checking authentication:", error);
+        console.error("Erreur lors de la vérification de l'authentification:", error);
         setIsAuthenticated(false);
         setLocation('/auth/login');
       }
@@ -36,16 +36,16 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
     checkAuth();
   }, [setLocation]);
 
+  // Afficher un état de chargement
   if (isAuthenticated === null) {
-    // Loading state
     return <div className="flex justify-center items-center h-screen">Chargement...</div>;
   }
 
+  // Laisser la redirection se produire
   if (isAuthenticated === false) {
-    // We'll let the redirect happen
     return null;
   }
 
-  // Only render the component if authenticated
+  // Rendre le composant uniquement si authentifié
   return <Component />;
 }

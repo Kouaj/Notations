@@ -17,20 +17,20 @@ export default function AppLayout() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Check if current route is an auth route
+  // Vérifier si la route actuelle est une route d'authentification
   const isAuthRoute = location.startsWith('/auth');
   
-  // Fetch current user
+  // Récupérer l'utilisateur actuel
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        console.log("AppLayout: Fetching current user");
+        console.log("AppLayout: Récupération de l'utilisateur actuel");
         const user = await storage.getCurrentUser();
-        console.log("AppLayout: Current user:", user);
+        console.log("AppLayout: Utilisateur actuel:", user);
         setCurrentUser(user);
         setIsLoading(false);
       } catch (error) {
-        console.error("AppLayout: Error fetching user:", error);
+        console.error("AppLayout: Erreur lors de la récupération de l'utilisateur:", error);
         setIsLoading(false);
       }
     };
@@ -38,7 +38,7 @@ export default function AppLayout() {
     fetchUser();
   }, []);
   
-  // If still loading, show loading indicator
+  // Si toujours en chargement, afficher l'indicateur de chargement
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Chargement de l'application...</div>;
   }
@@ -57,16 +57,16 @@ export default function AppLayout() {
       <main className="container mx-auto px-2 py-1 pb-16">
         <Switch>
           <Route path="/">
-            {() => <ProtectedRoute component={Home} />}
+            <ProtectedRoute component={Home} />
           </Route>
           <Route path="/parcelles">
-            {() => <ProtectedRoute component={Parcelles} />}
+            <ProtectedRoute component={Parcelles} />
           </Route>
           <Route path="/reseaux">
-            {() => <ProtectedRoute component={Reseaux} />}
+            <ProtectedRoute component={Reseaux} />
           </Route>
           <Route path="/history">
-            {() => <ProtectedRoute component={History} />}
+            <ProtectedRoute component={History} />
           </Route>
           <Route>
             <NotFound />

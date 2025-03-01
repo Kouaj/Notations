@@ -6,7 +6,7 @@ import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import { storage } from "@/lib/storage";
 
-// Configuration for wouter to work with GitHub Pages
+// Configuration optimisée pour wouter avec GitHub Pages
 export const useHashLocation = () => {
   const [loc, setLoc] = React.useState(window.location.hash.slice(1) || "/");
 
@@ -17,7 +17,7 @@ export const useHashLocation = () => {
     };
 
     window.addEventListener("hashchange", handler);
-    handler(); // Initialize with current hash
+    handler(); // Initialiser avec le hash actuel
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
@@ -29,6 +29,28 @@ export const useHashLocation = () => {
 };
 
 export default function AppRouter() {
+  // Ajoutons un effet pour rediriger depuis la racine vers /auth/login si l'utilisateur n'est pas connecté
+  useEffect(() => {
+    // S'assurer que le hash initial est défini si nous sommes à la racine sans hash
+    if (!window.location.hash && window.location.pathname === "/") {
+      const checkAuth = async () => {
+        try {
+          const user = await storage.getCurrentUser();
+          if (user) {
+            window.location.hash = "/";
+          } else {
+            window.location.hash = "/auth/login";
+          }
+        } catch (error) {
+          console.error("Erreur lors de la vérification de l'authentification:", error);
+          window.location.hash = "/auth/login";
+        }
+      };
+      
+      checkAuth();
+    }
+  }, []);
+
   return (
     <Router hook={useHashLocation}>
       <Switch>
