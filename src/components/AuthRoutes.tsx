@@ -10,11 +10,13 @@ import { storage } from "@/lib/storage";
  */
 export default function AuthRoutes() {
   const [, setLocation] = useLocation();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        setIsChecking(true);
         const user = await storage.getCurrentUser();
         if (user) {
           console.log("AuthRoutes: Utilisateur déjà connecté");
@@ -26,6 +28,8 @@ export default function AuthRoutes() {
       } catch (error) {
         console.error("AuthRoutes: Erreur lors de la vérification de l'authentification", error);
         setIsAuthenticated(false);
+      } finally {
+        setIsChecking(false);
       }
     };
     
@@ -35,11 +39,17 @@ export default function AuthRoutes() {
   // Rediriger si l'utilisateur est déjà connecté et essaie d'accéder aux pages d'auth
   const AuthRedirectWrapper = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
-      if (isAuthenticated) {
+      if (isAuthenticated && !isChecking) {
         console.log("AuthRedirectWrapper: Utilisateur déjà connecté, redirection vers /");
         setLocation('/');
       }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, isChecking]);
+    
+    if (isChecking) {
+      return <div className="flex justify-center items-center h-screen">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>;
+    }
     
     return <>{children}</>;
   };
@@ -59,9 +69,18 @@ export default function AuthRoutes() {
       <Route path="/auth">
         {() => {
           useEffect(() => {
-            console.log("Redirection vers /auth/login");
-            setLocation('/auth/login');
-          }, []);
+            if (!isChecking) {
+              console.log("Redirection vers /auth/login");
+              setLocation('/auth/login');
+            }
+          }, [isChecking]);
+          
+          if (isChecking) {
+            return <div className="flex justify-center items-center h-screen">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>;
+          }
+          
           return null;
         }}
       </Route>

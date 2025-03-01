@@ -6,12 +6,7 @@ import { useState, useEffect, useRef } from "react";
  * Optimisé pour wouter avec GitHub Pages
  */
 export const useHashLocation = (): [string, (to: string) => void] => {
-  const [loc, setLoc] = useState(() => {
-    // Initialiser avec le hash actuel ou la route par défaut
-    return window.location.hash.slice(1) || "/";
-  });
-  
-  // Utiliser useRef pour éviter des redirections en boucle
+  const [loc, setLoc] = useState(() => window.location.hash.slice(1) || "/");
   const initialRender = useRef(true);
   const processingHashChange = useRef(false);
 
@@ -25,14 +20,12 @@ export const useHashLocation = (): [string, (to: string) => void] => {
       console.log("Hash changé:", hash);
       setLoc(hash || "/");
       
-      // Réinitialiser après un court délai
       setTimeout(() => {
         processingHashChange.current = false;
       }, 100);
     };
 
     // S'assurer que nous avons un hash initial si nous sommes à la racine
-    // Seulement au premier rendu pour éviter une boucle
     if (initialRender.current && !window.location.hash) {
       console.log("Pas de hash détecté, définition du hash initial");
       initialRender.current = false;
@@ -53,7 +46,6 @@ export const useHashLocation = (): [string, (to: string) => void] => {
     processingHashChange.current = true;
     window.location.hash = to;
     
-    // Réinitialiser après un court délai
     setTimeout(() => {
       processingHashChange.current = false;
     }, 100);

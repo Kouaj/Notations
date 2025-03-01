@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -18,24 +19,6 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const redirectAttempted = useRef(false);
-
-  useEffect(() => {
-    console.log("Login: Page de connexion chargée");
-    const checkCurrentUser = async () => {
-      try {
-        const user = await storage.getCurrentUser();
-        if (user && !redirectAttempted.current) {
-          console.log("Login: Utilisateur déjà connecté, redirection vers /");
-          redirectAttempted.current = true;
-          setLocation('/');
-        }
-      } catch (error) {
-        console.error("Login: Erreur lors de la vérification de l'utilisateur actuel:", error);
-      }
-    };
-    checkCurrentUser();
-  }, [setLocation]);
 
   const validateForm = () => {
     try {
