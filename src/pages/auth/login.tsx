@@ -73,7 +73,7 @@ export default function Login() {
       console.log("Login: Utilisateurs récupérés:", users.length, users);
       
       // Trouver l'utilisateur par email
-      const user = users.find(u => u.email === email);
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (!user) {
         console.log("Login: Utilisateur non trouvé");
@@ -89,9 +89,12 @@ export default function Login() {
       
       // Vérifier le mot de passe - sécurisation minimale en base64
       const hashedPassword = btoa(password);
-      const storedPassword = localStorage.getItem(`user_${user.id}_password`);
+      const storedPasswordKey = `user_${user.id}_password`;
+      const storedPassword = localStorage.getItem(storedPasswordKey);
+      
       console.log("Login: Vérification du mot de passe pour userId:", user.id);
-      console.log("Login: Mot de passe stocké:", !!storedPassword);
+      console.log("Login: Clé du mot de passe:", storedPasswordKey);
+      console.log("Login: Mot de passe stocké existe:", !!storedPassword);
       
       if (hashedPassword === storedPassword) {
         console.log("Login: Mot de passe correct, connexion réussie");
@@ -111,7 +114,10 @@ export default function Login() {
           setLocation('/');
         }, 1000);
       } else {
-        console.log("Login: Mot de passe incorrect", hashedPassword, storedPassword);
+        console.log("Login: Mot de passe incorrect");
+        console.log("Login: Mot de passe fourni (hashé):", hashedPassword);
+        console.log("Login: Mot de passe stocké:", storedPassword);
+        
         setErrors({ general: "Email ou mot de passe incorrect" });
         toast({
           title: "Erreur de connexion",
