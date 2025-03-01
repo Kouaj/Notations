@@ -56,7 +56,7 @@ export default function AppLayout() {
       
       <main className="container mx-auto px-2 py-1 pb-16">
         <Switch>
-          <Route path="/" exact>
+          <Route path="/">
             {() => <ProtectedRoute component={Home} />}
           </Route>
           <Route path="/parcelles">
