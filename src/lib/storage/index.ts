@@ -4,6 +4,7 @@ import { ReseauStorage } from './reseauStorage';
 import { ParcelleStorage } from './parcelleStorage';
 import { HistoryStorage } from './historyStorage';
 import { IDBStorage } from './interfaces';
+import { User, Reseau, Parcelle, HistoryRecord } from '@/shared/schema';
 
 // Aggregate class that implements all storage interfaces
 class IndexedDBStorage implements IDBStorage {
@@ -17,11 +18,12 @@ class IndexedDBStorage implements IDBStorage {
     return this.userStorage.getUsers();
   }
 
-  async saveUser(user) {
-    return this.userStorage.saveUser(user);
+  async saveUser(user: User) {
+    await this.userStorage.saveUser(user);
+    return user;
   }
 
-  async getUserById(id) {
+  async getUserById(id: string) {
     return this.userStorage.getUserById(id);
   }
 
@@ -29,7 +31,7 @@ class IndexedDBStorage implements IDBStorage {
     return this.userStorage.getCurrentUser();
   }
 
-  async setCurrentUser(user) {
+  async setCurrentUser(user: User | null) {
     return this.userStorage.setCurrentUser(user);
   }
 
@@ -38,23 +40,24 @@ class IndexedDBStorage implements IDBStorage {
     return this.reseauStorage.getReseaux();
   }
 
-  async getReseauxByUser(userId) {
+  async getReseauxByUser(userId: string) {
     return this.reseauStorage.getReseauxByUser(userId);
   }
 
-  async saveReseau(reseau) {
-    return this.reseauStorage.saveReseau(reseau);
+  async saveReseau(reseau: Reseau) {
+    await this.reseauStorage.saveReseau(reseau);
+    return reseau;
   }
 
-  async deleteReseau(id) {
+  async deleteReseau(id: number) {
     return this.reseauStorage.deleteReseau(id);
   }
 
-  async updateReseau(reseau) {
+  async updateReseau(reseau: Reseau) {
     return this.reseauStorage.updateReseau(reseau);
   }
 
-  async setSelectedReseau(reseau) {
+  async setSelectedReseau(reseau: Reseau | null) {
     return this.reseauStorage.setSelectedReseau(reseau);
   }
 
@@ -67,27 +70,28 @@ class IndexedDBStorage implements IDBStorage {
     return this.parcelleStorage.getParcelles();
   }
 
-  async getParcellesByUser(userId) {
+  async getParcellesByUser(userId: string) {
     return this.parcelleStorage.getParcellesByUser(userId);
   }
 
-  async getParcellesByReseau(reseauId, userId) {
+  async getParcellesByReseau(reseauId: number, userId: string) {
     return this.parcelleStorage.getParcellesByReseau(reseauId, userId);
   }
 
-  async saveParcelle(parcelle) {
-    return this.parcelleStorage.saveParcelle(parcelle);
+  async saveParcelle(parcelle: Parcelle) {
+    await this.parcelleStorage.saveParcelle(parcelle);
+    return parcelle;
   }
 
-  async deleteParcelle(id) {
+  async deleteParcelle(id: number) {
     return this.parcelleStorage.deleteParcelle(id);
   }
 
-  async updateParcelle(parcelle) {
+  async updateParcelle(parcelle: Parcelle) {
     return this.parcelleStorage.updateParcelle(parcelle);
   }
 
-  async setSelectedParcelle(parcelle) {
+  async setSelectedParcelle(parcelle: Parcelle | null) {
     return this.parcelleStorage.setSelectedParcelle(parcelle);
   }
 
@@ -100,16 +104,32 @@ class IndexedDBStorage implements IDBStorage {
     return this.historyStorage.getHistory();
   }
 
-  async getHistoryByUser(userId) {
+  async getHistoryByUser(userId: string) {
     return this.historyStorage.getHistoryByUser(userId);
   }
 
-  async saveHistory(record) {
-    return this.historyStorage.saveHistory(record);
+  async saveHistory(record: HistoryRecord) {
+    await this.historyStorage.saveHistory(record);
+    return record;
   }
 
-  async deleteHistory(id) {
+  async deleteHistory(id: number) {
     return this.historyStorage.deleteHistory(id);
+  }
+
+  // Method to save photos added to comments
+  async savePhoto(photo: File): Promise<string> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          resolve('');
+        }
+      };
+      reader.readAsDataURL(photo);
+    });
   }
 }
 

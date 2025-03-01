@@ -5,7 +5,7 @@ import { Parcelle, Reseau, HistoryRecord, User } from '@/shared/schema';
 export interface IDBStorage {
   // Users
   getUsers(): Promise<User[]>;
-  saveUser(user: User): Promise<void>;
+  saveUser(user: User): Promise<User>;
   getUserById(id: string): Promise<User | null>;
   getCurrentUser(): Promise<User | null>;
   setCurrentUser(user: User | null): Promise<void>;
@@ -13,7 +13,7 @@ export interface IDBStorage {
   // Réseaux
   getReseaux(): Promise<Reseau[]>;
   getReseauxByUser(userId: string): Promise<Reseau[]>;
-  saveReseau(reseau: Reseau): Promise<void>;
+  saveReseau(reseau: Reseau): Promise<Reseau>;
   deleteReseau(id: number): Promise<void>;
   updateReseau(reseau: Reseau): Promise<void>;
   setSelectedReseau(reseau: Reseau | null): Promise<void>;
@@ -23,7 +23,7 @@ export interface IDBStorage {
   getParcelles(): Promise<Parcelle[]>;
   getParcellesByUser(userId: string): Promise<Parcelle[]>;
   getParcellesByReseau(reseauId: number, userId: string): Promise<Parcelle[]>;
-  saveParcelle(parcelle: Parcelle): Promise<void>;
+  saveParcelle(parcelle: Parcelle): Promise<Parcelle>;
   deleteParcelle(id: number): Promise<void>;
   updateParcelle(parcelle: Parcelle): Promise<void>;
   setSelectedParcelle(parcelle: Parcelle | null): Promise<void>;
@@ -32,6 +32,9 @@ export interface IDBStorage {
   // Historique
   getHistory(): Promise<HistoryRecord[]>;
   getHistoryByUser(userId: string): Promise<HistoryRecord[]>;
-  saveHistory(record: HistoryRecord): Promise<void>;
+  saveHistory(record: HistoryRecord): Promise<HistoryRecord>;
   deleteHistory(id: number): Promise<void>;
+  
+  // Photos
+  savePhoto(photo: File): Promise<string>;
 }
