@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, SystemLog } from "@/shared/schema";
 import { storage } from "@/lib/storage";
-import { ReloadIcon } from "@radix-ui/react-icons";
 
 export default function Admin() {
   const [location, setLocation] = useLocation();
@@ -30,7 +29,7 @@ export default function Admin() {
           variant: "destructive"
         });
       } else {
-        setIsLoading(false); // Changed from setLoading to setIsLoading
+        setIsLoading(false);
       }
     };
     
@@ -63,7 +62,7 @@ export default function Admin() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <ReloadIcon className="mr-2 h-4 w-4 animate-spin" /> Chargement...
+        <div className="mr-2 h-4 w-4 animate-spin">⟳</div> Chargement...
       </div>
     );
   }
