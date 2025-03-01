@@ -29,7 +29,6 @@ export const useHashLocation = () => {
 };
 
 export default function AppRouter() {
-  // The Router component will use our custom hash location hook
   return (
     <Router hook={useHashLocation}>
       <Switch>
