@@ -115,104 +115,85 @@ export class UserStorage extends BaseStorage {
   }
 
   async clearAllUsers(): Promise<boolean> {
+    console.log("🚀 Début de la réinitialisation complète des utilisateurs");
+    
+    // Étape 1: Suppression complète de la base de données
     try {
-      console.log("clearAllUsers: Nouvelle approche pour effacer toutes les données utilisateur");
-      
-      // Obtenir une référence directe à la base de données
-      const db = await this.getDB();
-      
-      // 1. Vider le store CURRENT_USER avec une transaction dédiée
-      return new Promise((resolve) => {
-        try {
-          console.log("clearAllUsers: Phase 1 - Nettoyage de CURRENT_USER");
-          const tx1 = db.transaction(STORES.CURRENT_USER, 'readwrite');
-          const currentUserStore = tx1.objectStore(STORES.CURRENT_USER);
-          
-          const clearReq1 = currentUserStore.clear();
-          
-          clearReq1.onsuccess = () => {
-            console.log("clearAllUsers: CURRENT_USER vidé avec succès");
-            
-            // 2. Vider le store USERS avec une nouvelle transaction
-            try {
-              console.log("clearAllUsers: Phase 2 - Nettoyage de USERS");
-              const tx2 = db.transaction(STORES.USERS, 'readwrite');
-              const usersStore = tx2.objectStore(STORES.USERS);
-              
-              const clearReq2 = usersStore.clear();
-              
-              clearReq2.onsuccess = () => {
-                console.log("clearAllUsers: USERS vidé avec succès");
-                
-                // 3. Nettoyer localStorage
-                console.log("clearAllUsers: Phase 3 - Nettoyage de localStorage");
-                for (let i = 0; i < localStorage.length; i++) {
-                  const key = localStorage.key(i);
-                  if (key && key.startsWith('user_') && key.endsWith('_password')) {
-                    console.log(`clearAllUsers: Suppression de la clé localStorage: ${key}`);
-                    localStorage.removeItem(key);
-                    // Reculer l'index car nous venons de supprimer un élément
-                    i--;
-                  }
-                }
-                
-                console.log("clearAllUsers: Nettoyage complet terminé, vérification...");
-                
-                // Vérifier le résultat avec des promesses indépendantes pour éviter toute contamination
-                setTimeout(async () => {
-                  try {
-                    // Vérification indépendante des utilisateurs
-                    const remainingUsersCheck = await this.performTransaction(
-                      STORES.USERS,
-                      'readonly',
-                      store => store.getAll()
-                    );
-                    
-                    // Vérification indépendante de l'utilisateur actuel
-                    const currentUserCheck = await this.performTransaction(
-                      STORES.CURRENT_USER,
-                      'readonly',
-                      store => store.get('current')
-                    );
-                    
-                    console.log("clearAllUsers: Résultat de vérification - Utilisateurs restants:", remainingUsersCheck?.length || 0);
-                    console.log("clearAllUsers: Résultat de vérification - Utilisateur actuel:", currentUserCheck);
-                    
-                    const success = (!remainingUsersCheck || remainingUsersCheck.length === 0) && !currentUserCheck;
-                    console.log("clearAllUsers: Résultat global:", success ? "SUCCÈS" : "ÉCHEC");
-                    
-                    resolve(success);
-                  } catch (verifyError) {
-                    console.error("clearAllUsers: Erreur lors de la vérification finale:", verifyError);
-                    resolve(false);
-                  }
-                }, 300); // Petit délai pour assurer que les transactions sont terminées
-              };
-              
-              clearReq2.onerror = (event) => {
-                console.error("clearAllUsers: Erreur lors du nettoyage de USERS:", event);
-                resolve(false);
-              };
-              
-            } catch (error2) {
-              console.error("clearAllUsers: Erreur lors de la création de la transaction USERS:", error2);
-              resolve(false);
-            }
-          };
-          
-          clearReq1.onerror = (event) => {
-            console.error("clearAllUsers: Erreur lors du nettoyage de CURRENT_USER:", event);
-            resolve(false);
-          };
-          
-        } catch (error1) {
-          console.error("clearAllUsers: Erreur lors de la création de la transaction CURRENT_USER:", error1);
-          resolve(false);
+      // On ferme d'abord toute connexion existante
+      const dbPromise = this.dbPromise;
+      if (dbPromise) {
+        const db = await dbPromise.catch(() => null);
+        if (db) {
+          db.close();
+          console.log("Base de données fermée avec succès");
         }
-      });
+      }
       
-    } catch (mainError) {
-      console.error("clearAllUsers: Erreur principale:", mainError);
+      // Supprimer complètement la base de données
+      return new Promise((resolve) => {
+        const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+        
+        deleteRequest.onsuccess = () => {
+          console.log("🎉 Base de données supprimée avec succès");
+          
+          // Étape 2: Nettoyer localStorage
+          console.log("Nettoyage de localStorage");
+          const toRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('user_') && key?.endsWith('_password')) {
+              toRemove.push(key);
+            }
+          }
+          
+          // Supprimer les clés identifiées
+          toRemove.forEach(key => {
+            console.log(`Suppression de la clé localStorage: ${key}`);
+            localStorage.removeItem(key);
+          });
+          
+          // Étape 3: Recréer la base de données
+          console.log("Recréation de la base de données");
+          // Forcer la réinitialisation de la promise pour recréer la base de données
+          this.dbPromise = this.initDB();
+          
+          // Vérifier que la base est recréée correctement
+          this.dbPromise.then(() => {
+            console.log("✅ Base de données recréée avec succès");
+            
+            // Vérifier que tout est bien réinitialisé après un court délai
+            setTimeout(async () => {
+              try {
+                const users = await this.getUsers();
+                const currentUser = await this.getCurrentUser();
+                
+                if (users.length === 0 && !currentUser) {
+                  console.log("✅ Réinitialisation complète confirmée");
+                  resolve(true);
+                } else {
+                  console.error("❌ Échec de la réinitialisation complète");
+                  console.log("Users restants:", users);
+                  console.log("Current user:", currentUser);
+                  resolve(false);
+                }
+              } catch (error) {
+                console.error("Erreur lors de la vérification finale:", error);
+                resolve(false);
+              }
+            }, 500);
+          }).catch(error => {
+            console.error("Erreur lors de la recréation de la base de données:", error);
+            resolve(false);
+          });
+        };
+        
+        deleteRequest.onerror = (event) => {
+          console.error("❌ Erreur lors de la suppression de la base de données:", event);
+          resolve(false);
+        };
+      });
+    } catch (error) {
+      console.error("❌ Erreur critique lors de la réinitialisation:", error);
       return false;
     }
   }

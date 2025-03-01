@@ -65,6 +65,8 @@ export default function Login() {
     }
 
     setIsLoading(true);
+    setErrors({});
+
     try {
       // Récupérer tous les utilisateurs
       const users = await storage.getUsers();
@@ -87,7 +89,7 @@ export default function Login() {
       // Vérifier le mot de passe
       const hashedPassword = btoa(password);
       const storedPassword = localStorage.getItem(`user_${user.id}_password`);
-      console.log("Login: Mot de passe stocké pour l'utilisateur:", !!storedPassword);
+      console.log("Login: Vérification du mot de passe:", !!storedPassword);
       
       if (hashedPassword === storedPassword) {
         console.log("Login: Mot de passe correct, connexion réussie");
@@ -100,8 +102,9 @@ export default function Login() {
           description: "Vous êtes maintenant connecté"
         });
         
-        // Rediriger avec un délai
+        // Rediriger vers la page d'accueil
         setTimeout(() => {
+          console.log("Login: Redirection vers la page d'accueil");
           window.location.hash = "#/";
           window.location.reload();
         }, 1000);

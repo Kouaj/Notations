@@ -70,7 +70,7 @@ function ResetUsersButton() {
       const usersBefore = await storage.getUsers();
       console.log("Utilisateurs avant réinitialisation:", usersBefore);
       
-      // Effacer tous les utilisateurs
+      // Effacer tous les utilisateurs avec la nouvelle approche radicale
       const success = await storage.clearAllUsers();
       console.log("Résultat de la réinitialisation:", success);
       
