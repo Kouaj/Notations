@@ -24,8 +24,9 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
           console.log("ProtectedRoute: Aucun utilisateur trouvé, redirection vers la connexion");
           setIsAuthenticated(false);
           
-          // Utiliser le format de redirection compatible avec le hash
+          // Forcer une redirection complète vers la page de connexion
           window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
+          window.location.reload();
         } else {
           console.log("ProtectedRoute: Utilisateur authentifié:", user.name);
           setIsAuthenticated(true);
@@ -40,7 +41,9 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
+          // Forcer une redirection complète vers la page de connexion
           window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
+          window.location.reload();
         }
       }
     };

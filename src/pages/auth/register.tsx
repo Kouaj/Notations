@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -154,13 +155,15 @@ export default function Register() {
           variant: "success"
         });
         
-        console.log("Register: Préparation de la redirection vers la page de connexion");
+        console.log("Register: Redirection vers la page de connexion");
         
+        // Forcer une redirection complète vers la page de connexion
         setTimeout(() => {
-          console.log("Register: Redirection vers la page de connexion (hash routing)");
-          window.location.hash = "#/auth/login";
-          window.dispatchEvent(new HashChangeEvent("hashchange"));
-        }, 1500);
+          console.log("Exécution de la redirection...");
+          window.location.href = window.location.origin + window.location.pathname + '#/auth/login';
+          // Forcer un rechargement pour s'assurer que tout est bien initialisé
+          window.location.reload();
+        }, 1000);
       } catch (saveError: any) {
         console.error("Register: Erreur lors de la sauvegarde de l'utilisateur:", saveError);
         localStorage.removeItem(`user_${id}_password`);
