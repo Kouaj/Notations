@@ -66,39 +66,36 @@ function ResetUsersButton() {
       setIsResetting(true);
       console.log("Début de la réinitialisation des utilisateurs...");
       
-      // Première étape - vérifier les utilisateurs existants
-      const usersBefore = await storage.getUsers();
-      console.log("Utilisateurs avant réinitialisation:", usersBefore);
+      // Approche radicale: supprimer toutes les données
+      localStorage.clear();
       
-      // Effacer tous les utilisateurs avec la nouvelle approche radicale
-      const success = await storage.clearAllUsers();
-      console.log("Résultat de la réinitialisation:", success);
+      // Effacer la base de données IndexedDB
+      const request = indexedDB.deleteDatabase('LovableDemoDatabase');
       
-      // Vérifier après effacement
-      const usersAfter = await storage.getUsers();
-      console.log("Utilisateurs après réinitialisation:", usersAfter);
-      
-      if (success && usersAfter.length === 0) {
+      request.onsuccess = function() {
+        console.log("Base de données IndexedDB supprimée avec succès");
         toast({
           title: "Réinitialisation réussie",
-          description: "Tous les utilisateurs ont été supprimés. Redirection en cours...",
+          description: "Toutes les données ont été supprimées. Redirection en cours...",
           variant: "success"
         });
         
-        // Forcer un rechargement complet pour s'assurer que tout est nettoyé
+        // Forcer un rechargement complet
         setTimeout(() => {
-          console.log("Redirection vers la page de connexion...");
-          window.location.hash = "#/auth/login";
-          window.location.reload();
+          console.log("Redirection...");
+          window.location.href = window.location.origin + window.location.pathname;
         }, 1500);
-      } else {
-        console.error("La réinitialisation n'a pas fonctionné comme prévu");
+      };
+      
+      request.onerror = function(event) {
+        console.error("Erreur lors de la suppression de la base de données:", event);
         toast({
           title: "Erreur",
-          description: "La réinitialisation n'a pas complètement fonctionné. Veuillez réessayer.",
+          description: "La réinitialisation n'a pas fonctionné. Veuillez réessayer.",
           variant: "destructive"
         });
-      }
+        setIsResetting(false);
+      };
     } catch (error) {
       console.error("Erreur lors de la réinitialisation des utilisateurs:", error);
       toast({
@@ -106,7 +103,6 @@ function ResetUsersButton() {
         description: "Une erreur s'est produite lors de la réinitialisation",
         variant: "destructive"
       });
-    } finally {
       setIsResetting(false);
       setIsOpen(false);
     }
@@ -156,6 +152,7 @@ export default function AppRouter() {
       try {
         console.log("AppRouter: Vérification de l'authentification initiale");
         const user = await storage.getCurrentUser();
+        console.log("AppRouter: Utilisateur actuel:", user);
         
         // Si aucun hash n'est défini ou si nous sommes à la racine sans hash
         if (!window.location.hash || window.location.hash === "#/" || window.location.hash === "#") {

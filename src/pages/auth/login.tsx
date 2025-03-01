@@ -70,7 +70,7 @@ export default function Login() {
     try {
       // Récupérer tous les utilisateurs
       const users = await storage.getUsers();
-      console.log("Login: Utilisateurs récupérés:", users);
+      console.log("Login: Utilisateurs récupérés:", users.length, users);
       
       // Trouver l'utilisateur par email
       const user = users.find(u => u.email === email);
@@ -83,33 +83,35 @@ export default function Login() {
           description: "Email ou mot de passe incorrect",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
       
-      // Vérifier le mot de passe
+      // Vérifier le mot de passe - sécurisation minimale en base64
       const hashedPassword = btoa(password);
       const storedPassword = localStorage.getItem(`user_${user.id}_password`);
-      console.log("Login: Vérification du mot de passe:", !!storedPassword);
+      console.log("Login: Vérification du mot de passe pour userId:", user.id);
+      console.log("Login: Mot de passe stocké:", !!storedPassword);
       
       if (hashedPassword === storedPassword) {
         console.log("Login: Mot de passe correct, connexion réussie");
         
         // Définir l'utilisateur actuel
         await storage.setCurrentUser(user);
+        console.log("Login: Utilisateur actuel défini:", user);
         
         toast({
           title: "Connexion réussie",
           description: "Vous êtes maintenant connecté"
         });
         
-        // Rediriger vers la page d'accueil
+        // Redirection plus douce
         setTimeout(() => {
           console.log("Login: Redirection vers la page d'accueil");
-          window.location.hash = "#/";
-          window.location.reload();
+          setLocation('/');
         }, 1000);
       } else {
-        console.log("Login: Mot de passe incorrect");
+        console.log("Login: Mot de passe incorrect", hashedPassword, storedPassword);
         setErrors({ general: "Email ou mot de passe incorrect" });
         toast({
           title: "Erreur de connexion",
