@@ -35,4 +35,8 @@ export interface IDBStorage {
   getHistoryByUser(userId: string): Promise<HistoryRecord[]>;
   saveHistory(record: HistoryRecord): Promise<void>;
   deleteHistory(id: number): Promise<void>;
+
+  // Photos/Notations
+  savePhoto(photo: any): Promise<void>;
+  saveNotation(notation: HistoryRecord): Promise<void>;
 }
