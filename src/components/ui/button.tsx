@@ -10,21 +10,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow hover:from-purple-700 hover:to-indigo-700 hover:shadow-md",
+        default: "bg-gradient-to-r from-purple-600 to-indigo-600 text-primary-foreground hover:from-purple-700 hover:to-indigo-700",
         destructive:
-          "bg-gradient-to-r from-red-500 to-red-600 text-white shadow hover:from-red-600 hover:to-red-700 hover:shadow-md",
+          "bg-gradient-to-r from-red-500 to-red-600 text-destructive-foreground hover:from-red-600 hover:to-red-700",
         outline:
-          "border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 hover:border-indigo-300",
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow hover:from-indigo-600 hover:to-purple-600 hover:shadow-md",
-        ghost: "text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800",
-        link: "text-indigo-600 underline-offset-4 hover:underline",
-        success: "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow hover:from-green-600 hover:to-emerald-600 hover:shadow-md",
+          "bg-gradient-to-r from-indigo-500 to-purple-500 text-secondary-foreground hover:from-indigo-600 hover:to-purple-600",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+        success: "bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 py-1",
-        lg: "h-11 rounded-md px-8 py-3",
+        default: "h-9 px-3 py-1",
+        sm: "h-8 rounded-md px-2 py-0",
+        lg: "h-10 rounded-md px-6",
         icon: "h-9 w-9",
       },
     },

@@ -1,3 +1,4 @@
+
 import { User, Reseau, Parcelle, HistoryRecord } from "@/shared/schema";
 import { openDB, DBSchema } from 'idb';
 
