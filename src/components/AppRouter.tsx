@@ -6,18 +6,25 @@ import Login from "@/pages/auth/login";
 import Register from "@/pages/auth/register";
 import { storage } from "@/lib/storage";
 
-// Configuration pour wouter afin qu'il fonctionne avec GitHub Pages
+// Configuration améliorée pour le hook de localisation avec hash
 export const useHashLocation = () => {
-  const [loc, setLoc] = React.useState(window.location.hash.slice(1) || "/");
+  const [loc, setLoc] = React.useState(() => window.location.hash.slice(1) || "/");
 
   React.useEffect(() => {
+    // Fonction pour mettre à jour la localisation basée sur le hash
     const handler = () => {
       const hash = window.location.hash.slice(1);
       setLoc(hash || "/");
     };
 
+    // Gérer le cas d'un rechargement de page sans hash
+    if (window.location.hash === "" && window.location.pathname !== "/") {
+      window.location.hash = window.location.pathname;
+    }
+
     window.addEventListener("hashchange", handler);
-    handler(); // Initialiser avec le hash actuel
+    // Initialiser avec le hash actuel
+    handler();
     return () => window.removeEventListener("hashchange", handler);
   }, []);
 
