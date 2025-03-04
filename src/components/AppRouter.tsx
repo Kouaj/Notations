@@ -11,8 +11,12 @@ export const useHashLocation = () => {
   const [loc, setLoc] = React.useState(window.location.hash.slice(1) || "/");
 
   React.useEffect(() => {
+    // Debug logging for hash changes
+    console.log("Current hash location:", window.location.hash);
+    
     const handler = () => {
       const hash = window.location.hash.slice(1);
+      console.log("Hash changed to:", hash);
       setLoc(hash || "/");
     };
 
@@ -22,6 +26,7 @@ export const useHashLocation = () => {
   }, []);
 
   const navigate = (to: string) => {
+    console.log("Navigating to:", to);
     window.location.hash = to;
   };
 
@@ -29,14 +34,24 @@ export const useHashLocation = () => {
 };
 
 export default function AppRouter() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  
+  console.log("Current router location:", location);
   
   // Vérification de l'authentification au chargement initial
   useEffect(() => {
     const checkAuth = async () => {
-      const user = await storage.getCurrentUser();
-      // Si aucun utilisateur n'est connecté, rediriger vers la page de connexion
-      if (!user) {
+      try {
+        const user = await storage.getCurrentUser();
+        console.log("Current user:", user);
+        
+        // Si aucun utilisateur n'est connecté, rediriger vers la page de connexion
+        if (!user) {
+          console.log("No user found, redirecting to login");
+          setLocation('/auth/login');
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
         setLocation('/auth/login');
       }
     };
@@ -57,6 +72,7 @@ export default function AppRouter() {
         <Route path="/auth">
           {() => {
             useEffect(() => {
+              console.log("Auth route, redirecting to login");
               setLocation('/auth/login');
             }, []);
             return null;
@@ -65,12 +81,20 @@ export default function AppRouter() {
         {/* Route principale qui inclut la mise en page de l'application */}
         <Route path="/:rest*">
           {(params: { rest?: string }) => {
+            console.log("Main route with params:", params);
             // Si on est sur la racine, vérifier l'authentification
             if (params && params.rest === undefined) {
               useEffect(() => {
                 const checkRootAuth = async () => {
-                  const user = await storage.getCurrentUser();
-                  if (!user) {
+                  try {
+                    const user = await storage.getCurrentUser();
+                    console.log("Root route check, user:", user);
+                    if (!user) {
+                      console.log("No user at root, redirecting to login");
+                      setLocation('/auth/login');
+                    }
+                  } catch (error) {
+                    console.error("Root auth check error:", error);
                     setLocation('/auth/login');
                   }
                 };

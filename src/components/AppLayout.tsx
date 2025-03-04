@@ -12,6 +12,7 @@ import NotFound from "@/pages/not-found";
 
 export default function AppLayout() {
   const [location] = useLocation();
+  console.log("AppLayout current location:", location);
   
   // Vérifier si la route actuelle est une route d'authentification
   const isAuthRoute = location.startsWith('/auth');
@@ -29,7 +30,7 @@ export default function AppLayout() {
       
       <main className="container mx-auto px-2 py-1 pb-16">
         <Switch>
-          <Route path="/">
+          <Route path="/" exact>
             {() => <ProtectedRoute component={Home} />}
           </Route>
           <Route path="/parcelles">
@@ -41,7 +42,10 @@ export default function AppLayout() {
           <Route path="/history">
             {() => <ProtectedRoute component={History} />}
           </Route>
-          {!isAuthRoute && <Route><NotFound /></Route>}
+          <Route>
+            {/* Only show NotFound if not on an auth route */}
+            {!isAuthRoute && <NotFound />}
+          </Route>
         </Switch>
       </main>
       
