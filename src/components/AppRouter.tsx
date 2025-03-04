@@ -13,13 +13,15 @@ export const useHashLocation = () => {
   React.useEffect(() => {
     // Fonction pour mettre à jour la localisation basée sur le hash
     const handler = () => {
+      console.log("Hash changed to:", window.location.hash);
       const hash = window.location.hash.slice(1);
       setLoc(hash || "/");
     };
 
     // Gérer le cas d'un rechargement de page sans hash
-    if (window.location.hash === "" && window.location.pathname !== "/") {
-      window.location.hash = window.location.pathname;
+    if (window.location.hash === "") {
+      console.log("Setting initial hash to:", window.location.pathname);
+      window.location.hash = window.location.pathname === "/" ? "/" : window.location.pathname;
     }
 
     window.addEventListener("hashchange", handler);
@@ -29,6 +31,7 @@ export const useHashLocation = () => {
   }, []);
 
   const navigate = (to: string) => {
+    console.log("Navigating to:", to);
     window.location.hash = to;
   };
 
@@ -36,14 +39,24 @@ export const useHashLocation = () => {
 };
 
 export default function AppRouter() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  
+  console.log("Current location:", location);
   
   // Vérification de l'authentification au chargement initial
   useEffect(() => {
     const checkAuth = async () => {
-      const user = await storage.getCurrentUser();
-      // Si aucun utilisateur n'est connecté, rediriger vers la page de connexion
-      if (!user) {
+      console.log("Checking authentication...");
+      try {
+        const user = await storage.getCurrentUser();
+        console.log("Current user:", user);
+        // Si aucun utilisateur n'est connecté, rediriger vers la page de connexion
+        if (!user) {
+          console.log("No user found, redirecting to login");
+          setLocation('/auth/login');
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
         setLocation('/auth/login');
       }
     };
@@ -64,6 +77,7 @@ export default function AppRouter() {
         <Route path="/auth">
           {() => {
             useEffect(() => {
+              console.log("Auth route, redirecting to login");
               setLocation('/auth/login');
             }, []);
             return null;
@@ -76,8 +90,16 @@ export default function AppRouter() {
             if (params && params.rest === undefined) {
               useEffect(() => {
                 const checkRootAuth = async () => {
-                  const user = await storage.getCurrentUser();
-                  if (!user) {
+                  console.log("Root route, checking auth");
+                  try {
+                    const user = await storage.getCurrentUser();
+                    console.log("Root auth check, current user:", user);
+                    if (!user) {
+                      console.log("No user at root, redirecting to login");
+                      setLocation('/auth/login');
+                    }
+                  } catch (error) {
+                    console.error("Root auth check error:", error);
                     setLocation('/auth/login');
                   }
                 };
